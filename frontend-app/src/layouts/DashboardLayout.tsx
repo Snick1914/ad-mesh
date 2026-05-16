@@ -7,9 +7,8 @@ export default function DashboardLayout() {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    // Implement logout logic here
-    console.log('Logging out...');
-    navigate('/');
+    localStorage.removeItem('token');
+    navigate('/login');
   };
 
   const navItems = [

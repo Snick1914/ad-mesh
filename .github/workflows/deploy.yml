@@ -27,28 +27,28 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Build and Push Backend (API)
-      - name: Build and push Backend
+      - name: Build and push Backend (API)
         uses: docker/build-push-action@v5
         with:
           context: ./backend
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PREFIX }}-api:latest
 
-      # Build and Push Dashboard
-      - name: Build and push Dashboard
+      # Build and Push App (Dashboard)
+      - name: Build and push App
         uses: docker/build-push-action@v5
         with:
           context: ./frontend-app
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PREFIX }}-dashboard:latest
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PREFIX }}-app:latest
 
-      # Build and Push Sales (Landing Page)
-      - name: Build and push Sales
+      # Build and Push Web (Landing Page)
+      - name: Build and push Web
         uses: docker/build-push-action@v5
         with:
           context: ./frontend-web
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PREFIX }}-sales:latest
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PREFIX }}-web:latest
 
   deploy:
     needs: build-and-push
@@ -78,20 +78,20 @@ jobs:
             POSTGRES_DB=admesh_db
             EOF
             
-            # Crear docker-compose.yml directamente (enviado desde GitHub)
+            # Crear docker-compose.yml directamente (actualizado con nuevos nombres)
             cat <<EOF > docker-compose.yml
             services:
-              sales:
-                image: ghcr.io/snick1914/ad-mesh-sales:latest
-                container_name: ad-mesh-sales
+              web:
+                image: ghcr.io/snick1914/ad-mesh-web:latest
+                container_name: ad-mesh-web
                 restart: unless-stopped
                 networks:
                   - ad-mesh-network
                   - proxy-network
 
-              dashboard:
-                image: ghcr.io/snick1914/ad-mesh-dashboard:latest
-                container_name: ad-mesh-dashboard
+              app:
+                image: ghcr.io/snick1914/ad-mesh-app:latest
+                container_name: ad-mesh-app
                 restart: unless-stopped
                 networks:
                   - ad-mesh-network
@@ -137,7 +137,7 @@ jobs:
             
             # Descargar imágenes nuevas y levantar
             docker compose pull
-            docker compose up -d
+            docker compose up -d --remove-orphans
             
-            # Limpiar
+            # Limpiar imágenes huérfanas
             docker image prune -f

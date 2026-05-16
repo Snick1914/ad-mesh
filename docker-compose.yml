@@ -1,15 +1,15 @@
 services:
-  sales:
-    image: ghcr.io/snick1914/ad-mesh-sales:latest
-    container_name: ad-mesh-sales
+  web:
+    image: ghcr.io/snick1914/ad-mesh-web:latest
+    container_name: ad-mesh-web
     restart: unless-stopped
     networks:
       - ad-mesh-network
       - proxy-network
 
-  dashboard:
-    image: ghcr.io/snick1914/ad-mesh-dashboard:latest
-    container_name: ad-mesh-dashboard
+  app:
+    image: ghcr.io/snick1914/ad-mesh-app:latest
+    container_name: ad-mesh-app
     restart: unless-stopped
     networks:
       - ad-mesh-network

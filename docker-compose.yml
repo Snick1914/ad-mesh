@@ -1,8 +1,6 @@
 services:
   sales:
-    build:
-      context: ./frontend-web
-      dockerfile: Dockerfile
+    image: ghcr.io/snick1914/ad-mesh-sales:latest
     container_name: ad-mesh-sales
     restart: unless-stopped
     networks:
@@ -10,18 +8,14 @@ services:
       - proxy-network
 
   dashboard:
-    build:
-      context: ./frontend-app
-      dockerfile: Dockerfile
+    image: ghcr.io/snick1914/ad-mesh-dashboard:latest
     container_name: ad-mesh-dashboard
     restart: unless-stopped
     networks:
       - ad-mesh-network
       - proxy-network
   api:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: ghcr.io/snick1914/ad-mesh-api:latest
     container_name: ad-mesh-api
     restart: unless-stopped
     depends_on:

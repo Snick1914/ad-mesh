@@ -4,11 +4,57 @@ on:
   push:
     branches: [ main ]
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME_PREFIX: snick1914/ad-mesh
+
 jobs:
-  deploy:
+  build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
     steps:
       - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Build and Push Backend (API)
+      - name: Build and push Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PREFIX }}-api:latest
+
+      # Build and Push Dashboard
+      - name: Build and push Dashboard
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend-app
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PREFIX }}-dashboard:latest
+
+      # Build and Push Sales (Landing Page)
+      - name: Build and push Sales
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend-web
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PREFIX }}-sales:latest
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code (to get docker-compose.yml)
         uses: actions/checkout@v4
 
       - name: Deploy via SSH
@@ -19,30 +65,79 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
-            cd /home/${{ secrets.SSH_USER }}
-            
-            # Si la carpeta no es un repositorio git, clonarlo
-            if [ ! -d "ad-mesh/.git" ]; then
-              rm -rf ad-mesh # Borrar la carpeta vacía si existe
-              git clone https://github.com/Snick1914/ad-mesh.git ad-mesh
-            fi
-            
-            cd ad-mesh
-            git pull origin main
+            mkdir -p /home/${{ secrets.SSH_USER }}/ad-mesh
+            cd /home/${{ secrets.SSH_USER }}/ad-mesh
             
             # Crear archivo .env desde secretos de GitHub
-            echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" > .env
-            echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env
-            echo "POSTGRES_SERVER=db" >> .env
-            echo "POSTGRES_USER=postgres" >> .env
-            echo "POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
-            echo "POSTGRES_DB=admesh_db" >> .env
+            cat <<EOF > .env
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+            POSTGRES_SERVER=db
+            POSTGRES_USER=postgres
+            POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}
+            POSTGRES_DB=admesh_db
+            EOF
             
-            # Copiar a backend para compatibilidad
-            cp .env backend/.env
+            # Crear docker-compose.yml directamente (enviado desde GitHub)
+            cat <<EOF > docker-compose.yml
+            services:
+              sales:
+                image: ghcr.io/snick1914/ad-mesh-sales:latest
+                container_name: ad-mesh-sales
+                restart: unless-stopped
+                networks:
+                  - ad-mesh-network
+                  - proxy-network
+
+              dashboard:
+                image: ghcr.io/snick1914/ad-mesh-dashboard:latest
+                container_name: ad-mesh-dashboard
+                restart: unless-stopped
+                networks:
+                  - ad-mesh-network
+                  - proxy-network
+
+              api:
+                image: ghcr.io/snick1914/ad-mesh-api:latest
+                container_name: ad-mesh-api
+                restart: unless-stopped
+                depends_on:
+                  - db
+                networks:
+                  - ad-mesh-network
+                  - proxy-network
+                env_file:
+                  - .env
+
+              db:
+                image: postgres:16-alpine
+                container_name: ad-mesh-db
+                environment:
+                  - POSTGRES_USER=\${POSTGRES_USER}
+                  - POSTGRES_PASSWORD=\${POSTGRES_PASSWORD}
+                  - POSTGRES_DB=\${POSTGRES_DB}
+                restart: unless-stopped
+                volumes:
+                  - ad-mesh-db-data:/var/lib/postgresql/data
+                networks:
+                  - ad-mesh-network
+
+            networks:
+              ad-mesh-network:
+                driver: bridge
+              proxy-network:
+                external: true
+
+            volumes:
+              ad-mesh-db-data:
+            EOF
             
-            # Levantar contenedores
-            docker-compose up -d --build
+            # Login al registro de GitHub en el servidor
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
-            # Limpiar imágenes antiguas
+            # Descargar imágenes nuevas y levantar
+            docker compose pull
+            docker compose up -d
+            
+            # Limpiar
             docker image prune -f

@@ -19,16 +19,27 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
-            cd /home/${{ secrets.SSH_USER }}/proyectos/ad-mesh
+            cd /home/${{ secrets.SSH_USER }}
+            
+            # Si la carpeta no es un repositorio git, clonarlo
+            if [ ! -d "ad-mesh/.git" ]; then
+              rm -rf ad-mesh # Borrar la carpeta vacía si existe
+              git clone https://github.com/Snick1914/ad-mesh.git ad-mesh
+            fi
+            
+            cd ad-mesh
             git pull origin main
             
             # Crear archivo .env desde secretos de GitHub
-            echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" > backend/.env
-            echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> backend/.env
-            echo "POSTGRES_SERVER=db" >> backend/.env
-            echo "POSTGRES_USER=postgres" >> backend/.env
-            echo "POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}" >> backend/.env
-            echo "POSTGRES_DB=admesh_db" >> backend/.env
+            echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" > .env
+            echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env
+            echo "POSTGRES_SERVER=db" >> .env
+            echo "POSTGRES_USER=postgres" >> .env
+            echo "POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+            echo "POSTGRES_DB=admesh_db" >> .env
+            
+            # Copiar a backend para compatibilidad
+            cp .env backend/.env
             
             # Levantar contenedores
             docker-compose up -d --build

@@ -3,29 +3,32 @@ services:
     build:
       context: ./frontend-web
       dockerfile: Dockerfile
-    ports:
-      - "3002:80"
     container_name: ad-mesh-sales
     restart: unless-stopped
+    networks:
+      - ad-mesh-network
+      - proxy-network
 
   dashboard:
     build:
       context: ./frontend-app
       dockerfile: Dockerfile
-    ports:
-      - "3001:80"
     container_name: ad-mesh-dashboard
     restart: unless-stopped
+    networks:
+      - ad-mesh-network
+      - proxy-network
   api:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    ports:
-      - "8001:8000"
     container_name: ad-mesh-api
     restart: unless-stopped
     depends_on:
       - db
+    networks:
+      - ad-mesh-network
+      - proxy-network
 
   db:
     image: postgres:16-alpine
@@ -34,11 +37,17 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=admesh_db
-    ports:
-      - "5433:5432"
     restart: unless-stopped
     volumes:
       - ad-mesh-db-data:/var/lib/postgresql/data
+    networks:
+      - ad-mesh-network
+
+networks:
+  ad-mesh-network:
+    driver: bridge
+  proxy-network:
+    external: true
 
 volumes:
   ad-mesh-db-data:

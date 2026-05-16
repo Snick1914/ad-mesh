@@ -1,0 +1,37 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            cd /home/${{ secrets.SSH_USER }}/proyectos/ad-mesh
+            git pull origin main
+            
+            # Crear archivo .env desde secretos de GitHub
+            echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" > backend/.env
+            echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> backend/.env
+            echo "POSTGRES_SERVER=db" >> backend/.env
+            echo "POSTGRES_USER=postgres" >> backend/.env
+            echo "POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}" >> backend/.env
+            echo "POSTGRES_DB=admesh_db" >> backend/.env
+            
+            # Levantar contenedores
+            docker-compose up -d --build
+            
+            # Limpiar imágenes antiguas
+            docker image prune -f

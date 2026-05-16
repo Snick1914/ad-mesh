@@ -32,7 +32,13 @@ services:
   api:
     volumes:
       - ./backend:/app
+    ports:
+      - "8001:8000"
     environment:
       - POSTGRES_SERVER=db
       - NODE_ENV=development
+
+  db:
+    ports:
+      - "5433:5432"
 

@@ -63,12 +63,18 @@ def register_user(
     db.refresh(db_obj)
     return db_obj
 
+from pydantic import BaseModel
+
+class GoogleToken(BaseModel):
+    id_token: str
+
 @router.post("/login/google", response_model=Token)
 def login_google(
     *,
     db: Session = Depends(deps.get_db),
-    token_in: str, # This is the credential/jtw from Google Frontend
+    token_data: GoogleToken,
 ) -> Any:
+    token_in = token_data.id_token
     """
     Login with Google.
     Verifies the token and creates a user if it doesn't exist.

@@ -40,6 +40,8 @@ jobs:
         with:
           context: ./frontend-app
           push: true
+          build-args: |
+            VITE_API_URL=https://api.ad-mesh.com/api/v1
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_PREFIX }}-app:latest
 
       # Build and Push Web (Landing Page)
@@ -138,6 +140,9 @@ jobs:
             # Descargar imágenes nuevas y levantar
             docker compose pull
             docker compose up -d --remove-orphans
+            
+            # Ejecutar migraciones de base de datos
+            docker compose exec -T api alembic upgrade head
             
             # Limpiar imágenes huérfanas
             docker image prune -f

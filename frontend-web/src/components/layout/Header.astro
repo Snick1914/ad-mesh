@@ -1,0 +1,85 @@
+---
+---
+<header class="fixed top-0 w-full bg-mesh-dark/80 backdrop-blur-md z-50 border-b border-white/10 transition-all duration-300">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-20">
+      <!-- Logo -->
+      <div class="flex-shrink-0 flex items-center gap-2">
+        <div class="w-8 h-8 rounded bg-gradient-to-br from-mesh-accent to-blue-600 flex items-center justify-center">
+          <svg class="w-5 h-5 text-mesh-dark" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        <span class="font-bold text-xl tracking-tight">ad-mesh</span>
+      </div>
+      
+      <!-- Desktop Menu -->
+      <nav class="hidden md:flex space-x-8">
+        <a href="#services" class="text-gray-300 hover:text-white transition-colors duration-200 text-sm font-medium">Servicios</a>
+        <a href="#features" class="text-gray-300 hover:text-white transition-colors duration-200 text-sm font-medium">Características</a>
+        <a href="#pricing" class="text-gray-300 hover:text-white transition-colors duration-200 text-sm font-medium">Precios</a>
+        <a href="#contact" class="text-gray-300 hover:text-white transition-colors duration-200 text-sm font-medium">Contacto</a>
+      </nav>
+      
+      <div class="hidden md:flex items-center space-x-4">
+        <a href="/login" class="text-gray-300 hover:text-white transition-colors duration-200 text-sm font-medium">Iniciar Sesión</a>
+        <a href="#contact" class="bg-mesh-accent hover:bg-mesh-accentHover text-mesh-dark px-5 py-2.5 rounded-full text-sm font-bold transition-all transform hover:scale-105">
+          Solicitar Demo
+        </a>
+      </div>
+
+      <!-- Mobile menu button -->
+      <div class="md:hidden flex items-center">
+        <button id="mobile-menu-btn" class="text-gray-300 hover:text-white focus:outline-none p-2" aria-label="Abrir menú">
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path id="menu-icon-path" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Menu -->
+  <div id="mobile-menu" class="md:hidden hidden bg-mesh-card border-b border-white/10 absolute w-full left-0 shadow-2xl">
+    <div class="px-4 pt-2 pb-6 space-y-1">
+      <a href="#services" class="block px-3 py-3 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-white/5">Servicios</a>
+      <a href="#features" class="block px-3 py-3 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-white/5">Características</a>
+      <a href="#pricing" class="block px-3 py-3 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-white/5">Precios</a>
+      <a href="#contact" class="block px-3 py-3 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-white/5">Contacto</a>
+      <div class="mt-4 pt-4 border-t border-white/10 flex flex-col gap-3 px-3">
+        <a href="/login" class="block text-center text-gray-300 hover:text-white py-2 font-medium">Iniciar Sesión</a>
+        <a href="#contact" class="block text-center bg-mesh-accent text-mesh-dark px-5 py-3 rounded-md font-bold">Solicitar Demo</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<script>
+  const btn = document.getElementById('mobile-menu-btn');
+  const menu = document.getElementById('mobile-menu');
+  const iconPath = document.getElementById('menu-icon-path');
+  let isMenuOpen = false;
+
+  if (btn && menu && iconPath) {
+    btn.addEventListener('click', () => {
+      isMenuOpen = !isMenuOpen;
+      if (isMenuOpen) {
+        menu.classList.remove('hidden');
+        iconPath.setAttribute('d', 'M6 18L18 6M6 6l12 12'); // X icon
+      } else {
+        menu.classList.add('hidden');
+        iconPath.setAttribute('d', 'M4 6h16M4 12h16M4 18h16'); // Hamburger icon
+      }
+    });
+
+    // Close menu on link click
+    const links = menu.querySelectorAll('a');
+    links.forEach(link => {
+      link.addEventListener('click', () => {
+        isMenuOpen = false;
+        menu.classList.add('hidden');
+        iconPath.setAttribute('d', 'M4 6h16M4 12h16M4 18h16');
+      });
+    });
+  }
+</script>

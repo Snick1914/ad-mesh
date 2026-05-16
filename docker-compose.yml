@@ -1,0 +1,44 @@
+services:
+  sales:
+    build:
+      context: ./frontend-web
+      dockerfile: Dockerfile
+    ports:
+      - "3002:80"
+    container_name: ad-mesh-sales
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: ./frontend-app
+      dockerfile: Dockerfile
+    ports:
+      - "3001:80"
+    container_name: ad-mesh-dashboard
+    restart: unless-stopped
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    container_name: ad-mesh-api
+    restart: unless-stopped
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16-alpine
+    container_name: ad-mesh-db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=admesh_db
+    ports:
+      - "5433:5432"
+    restart: unless-stopped
+    volumes:
+      - ad-mesh-db-data:/var/lib/postgresql/data
+
+volumes:
+  ad-mesh-db-data:

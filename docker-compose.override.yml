@@ -1,0 +1,38 @@
+services:
+  sales:
+    build:
+      context: ./frontend-web
+      dockerfile: Dockerfile
+      target: build
+    # Override for development
+    command: pnpm run dev --host 0.0.0.0
+    volumes:
+      - ./frontend-web:/app
+      - /app/node_modules
+    ports:
+      - "3010:4321"
+    environment:
+      - NODE_ENV=development
+
+  dashboard:
+    build:
+      context: ./frontend-app
+      dockerfile: Dockerfile
+      target: build
+    # Override for development
+    command: pnpm run dev --host 0.0.0.0
+    volumes:
+      - ./frontend-app:/app
+      - /app/node_modules
+    ports:
+      - "3011:5173"
+    environment:
+      - NODE_ENV=development
+
+  api:
+    volumes:
+      - ./backend:/app
+    environment:
+      - POSTGRES_SERVER=db
+      - NODE_ENV=development
+

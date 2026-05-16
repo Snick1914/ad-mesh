@@ -20,7 +20,7 @@ class Settings(BaseSettings):
             return [i.strip() for i in v.split(",")]
         elif isinstance(v, (list, str)):
             return v
-        raise ValueError(v)
+        return v
 
     # Database
     POSTGRES_SERVER: str = "db"

@@ -78,7 +78,7 @@ jobs:
             POSTGRES_USER=postgres
             POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}
             POSTGRES_DB=admesh_db
-            BACKEND_CORS_ORIGINS=https://app.ad-mesh.com,https://ad-mesh.com,http://localhost:5173,http://localhost:3000
+            BACKEND_CORS_ORIGINS=["https://app.ad-mesh.com","https://ad-mesh.com","http://localhost:5173","http://localhost:3000"]
             EOF
             
             # Crear docker-compose.yml directamente (actualizado con nuevos nombres)

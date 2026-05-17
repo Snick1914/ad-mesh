@@ -52,6 +52,13 @@ Este archivo mantiene el contexto de desarrollo del backend de **ad-mesh**, sigu
     *   `endpoints/playlist_endpoints.py`: Endpoints limpios de API (Creación, modificación secuencial y borrado).
     *   `alembic/versions/f23b45678c9d_add_playlist_models.py`: Migración de base de datos creada y lista para su aplicación.
 
+### 🌐 6. Conexión de Frontend y Eliminación del Modo Demo
+*   **Cambio**: Retiramos los conjuntos de datos estáticos ("INITIAL_DEVICES" e "INITIAL_MEDIA") del panel de control de React.
+*   **Detalles**:
+    *   **Registro de Usuarios**: Actualizado `RegisterForm.tsx` para incluir el campo requerido de la empresa del cliente (`company_name`), previniendo errores 422 con el backend.
+    *   **Pantallas y Vinculación (`DevicesManager.tsx`)**: Se removieron los dispositivos simulados en favor de llamadas reales `fetch` autenticadas hacia `/api/v1/devices/` para mostrar pantallas conectadas y sincronizar emparejamientos reales con códigos de activación dinámicos.
+    *   **Biblioteca y Cuotas SaaS (`MediaLibrary.tsx`)**: Reemplazada la lista simulada de videos por la carga directa de archivos con `FormData` a `/api/v1/media/upload`, consumo agregado en tiempo real del límite en Gigabytes (`max_storage_gb`) decodificado dinámicamente del token JWT, y eliminación física mediante la API.
+
 ---
 
 ## 🗺️ Próximos Pasos y Roadmap

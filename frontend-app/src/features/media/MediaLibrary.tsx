@@ -1,25 +1,125 @@
-import { useState, useCallback } from 'react';
-import { UploadCloud, Image as ImageIcon, Video, Trash2, Clock, HardDrive, Search, Film } from 'lucide-react';
+import { useState, useCallback, useEffect } from 'react';
+import { UploadCloud, Image as ImageIcon, Video, Trash2, Clock, HardDrive, Search, Film, Loader2 } from 'lucide-react';
 import type { MediaItem } from '../../types';
 
-const INITIAL_MEDIA: MediaItem[] = [
-  { id: 'm1', name: 'promo_verano_2024.mp4', url: '#', type: 'video', size: 45.2, duration: 30 },
-  { id: 'm2', name: 'menu_desayunos.jpg', url: '#', type: 'image', size: 2.1 },
-  { id: 'm3', name: 'oferta_flash_fin_semana.mp4', url: '#', type: 'video', size: 15.8, duration: 15 },
-  { id: 'm4', name: 'qr_encuesta_satisfaccion.jpg', url: '#', type: 'image', size: 1.5 },
-];
+const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 export default function MediaLibrary() {
-  const [mediaItems, setMediaItems] = useState<MediaItem[]>(INITIAL_MEDIA);
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const filteredMedia = mediaItems.filter(item => 
-    item.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // SaaS Quota State
+  const [usedStorageGb, setUsedStorageGb] = useState(0);
+  const [maxStorageGb, setMaxStorageGb] = useState(10);
 
-  const handleDelete = (id: string) => {
-    setMediaItems(mediaItems.filter(item => item.id !== id));
+  const fetchMedia = async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/media/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!response.ok) {
+        throw new Error('Error al obtener la biblioteca de medios.');
+      }
+      const data = await response.json();
+      const mapped = data.map((d: any) => ({
+        id: String(d.id),
+        name: d.name,
+        url: d.file_path.startsWith('http') ? d.file_path : `${API_URL.replace('/api/v1', '')}/${d.file_path}`,
+        type: d.file_type.startsWith('video') ? 'video' : 'image',
+        size: Number((d.file_size_bytes / (1024 * 1024)).toFixed(2)),
+        duration: d.file_type.startsWith('video') ? 15 : undefined,
+      }));
+      setMediaItems(mapped);
+
+      // Calcular espacio consumido agregando el peso de los archivos
+      const totalBytes = data.reduce((sum: number, item: any) => sum + item.file_size_bytes, 0);
+      setUsedStorageGb(Number((totalBytes / (1024 * 1024 * 1024)).toFixed(3)));
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMedia();
+    
+    // Obtener límites del JWT
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const payload = JSON.parse(window.atob(base64));
+        if (payload && payload.max_storage_gb) {
+          setMaxStorageGb(payload.max_storage_gb);
+        }
+      }
+    } catch (e) {
+      console.warn("Could not decode limits from JWT:", e);
+    }
+  }, []);
+
+  const handleDelete = async (id: string) => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/media/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.detail || 'Error al eliminar el recurso.');
+      }
+      await fetchMedia();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const uploadFiles = async (files: File[]) => {
+    setIsLoading(true);
+    setError('');
+    const token = localStorage.getItem('token');
+    
+    try {
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await fetch(`${API_URL}/media/upload`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        });
+        
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.detail || `Error al subir ${file.name}`);
+        }
+      }
+      await fetchMedia();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -35,39 +135,31 @@ export default function MediaLibrary() {
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    
-    // Simulate file upload
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
-      const newItems: MediaItem[] = files.map(file => ({
-        id: Math.random().toString(36).substr(2, 9),
-        name: file.name,
-        url: '#',
-        type: file.type.startsWith('video') ? 'video' : 'image',
-        size: Number((file.size / (1024 * 1024)).toFixed(2)),
-        duration: file.type.startsWith('video') ? 15 : undefined, // mock duration
-      }));
-      setMediaItems([...mediaItems, ...newItems]);
+      uploadFiles(files);
     }
   }, [mediaItems]);
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length > 0) {
-      const newItems: MediaItem[] = files.map(file => ({
-        id: Math.random().toString(36).substr(2, 9),
-        name: file.name,
-        url: '#',
-        type: file.type.startsWith('video') ? 'video' : 'image',
-        size: Number((file.size / (1024 * 1024)).toFixed(2)),
-        duration: file.type.startsWith('video') ? 15 : undefined,
-      }));
-      setMediaItems([...mediaItems, ...newItems]);
+      uploadFiles(files);
     }
   };
 
+  const filteredMedia = mediaItems.filter(item => 
+    item.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="flex flex-col h-full space-y-6">
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl text-sm text-center">
+          {error}
+        </div>
+      )}
+      
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white">Biblioteca de Medios</h1>
@@ -78,7 +170,7 @@ export default function MediaLibrary() {
             <HardDrive className="w-4 h-4" />
             <span>Uso de Nube:</span>
           </div>
-          <span className="font-bold text-white">12.5 GB <span className="text-gray-500 font-normal">/ 100 GB</span></span>
+          <span className="font-bold text-white">{usedStorageGb} GB <span className="text-gray-500 font-normal">/ {maxStorageGb} GB</span></span>
         </div>
       </div>
 

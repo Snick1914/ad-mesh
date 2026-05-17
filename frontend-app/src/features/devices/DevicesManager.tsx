@@ -1,39 +1,13 @@
-import { useState } from 'react';
-import { Search, Plus, MonitorPlay, Wifi, WifiOff, RefreshCw, ServerCog, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Plus, MonitorPlay, Wifi, WifiOff, RefreshCw, ServerCog, X, Loader2 } from 'lucide-react';
 import type { Device, DeviceStatus } from '../../types';
 
-const INITIAL_DEVICES: Device[] = [
-  {
-    id: '1',
-    serialNumber: 'AD-8291-MX',
-    name: 'Pantalla Recepción',
-    status: 'online',
-    lastHeartbeat: 'Hace 1 min',
-    storageUsed: 12.5,
-    storageTotal: 120,
-  },
-  {
-    id: '2',
-    serialNumber: 'AD-4412-MX',
-    name: 'Vitrina Principal',
-    status: 'offline',
-    lastHeartbeat: 'Hace 2 horas',
-    storageUsed: 85.2,
-    storageTotal: 120,
-  },
-  {
-    id: '3',
-    serialNumber: 'AD-9923-MX',
-    name: 'Pasillo Ofertas',
-    status: 'syncing',
-    lastHeartbeat: 'Hace 5 seg',
-    storageUsed: 45.0,
-    storageTotal: 500,
-  }
-];
+const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 export default function DevicesManager() {
-  const [devices, setDevices] = useState<Device[]>(INITIAL_DEVICES);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | DeviceStatus>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -42,29 +16,74 @@ export default function DevicesManager() {
   const [activationCode, setActivationCode] = useState('');
   const [deviceName, setDeviceName] = useState('');
 
-  const filteredDevices = devices.filter(device => {
-    const matchesSearch = device.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          device.serialNumber.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || device.status === filterStatus;
-    return matchesSearch && matchesStatus;
-  });
+  const fetchDevices = async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/devices/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!response.ok) {
+        throw new Error('Error al obtener los reproductores vinculados.');
+      }
+      const data = await response.json();
+      const mapped = data.map((d: any) => ({
+        id: String(d.id),
+        serialNumber: d.serial_number,
+        name: d.name || 'Sin nombre',
+        status: d.status || 'offline',
+        lastHeartbeat: d.last_heartbeat 
+          ? new Date(d.last_heartbeat).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+          : 'Nunca',
+        storageUsed: d.storage_used_gb,
+        storageTotal: d.storage_limit_gb,
+      }));
+      setDevices(mapped);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const handleLinkDevice = (e: React.FormEvent) => {
+  useEffect(() => {
+    fetchDevices();
+  }, []);
+
+  const handleLinkDevice = async (e: React.FormEvent) => {
     e.preventDefault();
     if (activationCode.length === 6 && deviceName.trim()) {
-      const newDevice: Device = {
-        id: Math.random().toString(36).substr(2, 9),
-        serialNumber: `AD-${Math.floor(1000 + Math.random() * 9000)}-NW`,
-        name: deviceName,
-        status: 'syncing',
-        lastHeartbeat: 'Justo ahora',
-        storageUsed: 0.1,
-        storageTotal: 120,
-      };
-      setDevices([...devices, newDevice]);
-      setIsModalOpen(false);
-      setActivationCode('');
-      setDeviceName('');
+      setIsLoading(true);
+      setError('');
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_URL}/devices/pair`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            pairing_code: activationCode,
+            name: deviceName
+          })
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || 'Error al vincular el reproductor.');
+        }
+        setIsModalOpen(false);
+        setActivationCode('');
+        setDeviceName('');
+        await fetchDevices();
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -80,6 +99,13 @@ export default function DevicesManager() {
         return <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-500/10 text-gray-400 border border-gray-500/20"><ServerCog className="w-3 h-3" /> Maint</span>;
     }
   };
+
+  const filteredDevices = devices.filter(device => {
+    const matchesSearch = device.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          device.serialNumber.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === 'all' || device.status === filterStatus;
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div className="flex flex-col h-full space-y-6">

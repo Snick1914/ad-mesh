@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, User, Phone, Loader2, LayoutDashboard } from 'lucide-react';
+import { Mail, Lock, User, Phone, Loader2, LayoutDashboard, Building2 } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
 import { AuthService } from '../AuthService';
 
@@ -9,6 +9,7 @@ export default function RegisterForm() {
     full_name: '',
     email: '',
     phone: '',
+    company_name: '',
     password: ''
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -78,6 +79,22 @@ export default function RegisterForm() {
               onChange={handleChange}
               className="w-full bg-[#161C2D] border border-white/10 rounded-xl pl-12 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#00F0FF] focus:border-transparent transition-all"
               placeholder="Carlos Mendoza"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-300 ml-1">Nombre de la Empresa</label>
+          <div className="relative">
+            <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+            <input
+              type="text"
+              name="company_name"
+              required
+              value={formData.company_name}
+              onChange={handleChange}
+              className="w-full bg-[#161C2D] border border-white/10 rounded-xl pl-12 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#00F0FF] focus:border-transparent transition-all"
+              placeholder="Mi Empresa S.A."
             />
           </div>
         </div>

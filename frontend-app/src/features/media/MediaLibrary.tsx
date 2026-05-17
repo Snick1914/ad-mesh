@@ -272,10 +272,19 @@ export default function MediaLibrary() {
             <div className="p-3 flex flex-col flex-1">
               <h4 className="text-sm font-medium text-white truncate mb-2" title={item.name}>{item.name}</h4>
               <div className="mt-auto flex justify-between items-center text-xs text-gray-400">
-                <span>{item.size} MB</span>
-                {item.duration && (
-                  <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {item.duration}s</span>
-                )}
+                <div className="flex items-center gap-2">
+                  <span>{item.size} MB</span>
+                  {item.duration && (
+                    <span className="flex items-center gap-1 border-l border-white/10 pl-2"><Clock className="w-3 h-3" /> {item.duration}s</span>
+                  )}
+                </div>
+                <button 
+                  onClick={() => handleDelete(item.id)}
+                  className="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors border border-red-500/10 z-20 relative"
+                  title="Eliminar archivo"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
               </div>
             </div>
           </div>

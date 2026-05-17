@@ -1,6 +1,7 @@
 import os
 import uuid
 import shutil
+import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from fastapi import UploadFile
@@ -15,7 +16,12 @@ class MediaService:
         return self.db.query(Media).filter(Media.id == media_id).first()
 
     def get_user_media(self, user_id: int) -> list[Media]:
-        return self.db.query(Media).filter(Media.user_id == user_id).order_by(Media.created_at.desc()).all()
+        try:
+            self.purge_expired_deleted_files()
+        except Exception as e:
+            print(f"Error en purga pasiva de archivos expitados: {e}")
+            
+        return self.db.query(Media).filter(Media.user_id == user_id, Media.is_deleted == False).order_by(Media.created_at.desc()).all()
 
     def get_user_storage_used_bytes(self, user_id: int) -> int:
         # Sumar el espacio consumido por todos los medios del usuario en bytes
@@ -70,19 +76,39 @@ class MediaService:
         return True, "Archivo subido con éxito a tu biblioteca.", media_item
 
     def delete_media_file(self, user_id: int, media_id: int) -> tuple[bool, str]:
-        media_item = self.db.query(Media).filter(Media.id == media_id, Media.user_id == user_id).first()
+        media_item = self.db.query(Media).filter(
+            Media.id == media_id, 
+            Media.user_id == user_id,
+            Media.is_deleted == False
+        ).first()
         if not media_item:
             return False, "El recurso multimedia no existe o no pertenece a tu cuenta."
 
-        # Borrar el archivo físico del disco del servidor
-        system_path = media_item.file_path
-        try:
-            if os.path.exists(system_path):
-                os.remove(system_path)
-        except Exception as e:
-            # Continuar eliminando el registro para evitar bloqueos
-            print(f"Error borrando archivo físico {system_path}: {e}")
-
-        self.db.delete(media_item)
+        # Borrado lógico: marcar como borrado
+        media_item.is_deleted = True
+        media_item.deleted_at = datetime.datetime.utcnow()
         self.db.commit()
-        return True, "El recurso ha sido eliminado de tu biblioteca."
+        return True, "El recurso ha sido enviado a la papelera. Se eliminará permanentemente en 7 días."
+
+    def purge_expired_deleted_files(self) -> int:
+        threshold = datetime.datetime.utcnow() - datetime.timedelta(days=7)
+        expired_files = self.db.query(Media).filter(
+            Media.is_deleted == True, 
+            Media.deleted_at < threshold
+        ).all()
+        
+        count = 0
+        for media_item in expired_files:
+            system_path = media_item.file_path
+            try:
+                if os.path.exists(system_path):
+                    os.remove(system_path)
+            except Exception as e:
+                print(f"Error borrando archivo físico {system_path}: {e}")
+            
+            self.db.delete(media_item)
+            count += 1
+            
+        if count > 0:
+            self.db.commit()
+        return count

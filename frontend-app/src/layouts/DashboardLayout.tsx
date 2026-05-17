@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, MonitorPlay, Film, ListMusic, Bell, User, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, MonitorPlay, Film, ListMusic, Bell, User, LogOut, Menu, X, Cpu } from 'lucide-react';
 
 export default function DashboardLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -41,6 +41,7 @@ export default function DashboardLayout() {
 
   const navItems = [
     { name: 'Dispositivos', path: '/devices', icon: MonitorPlay },
+    { name: 'Telemetría IoT', path: '/telemetry', icon: Cpu },
     { name: 'Biblioteca', path: '/media', icon: Film },
     { name: 'Playlists', path: '/playlists', icon: ListMusic },
   ];

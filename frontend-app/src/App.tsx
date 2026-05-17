@@ -4,6 +4,7 @@ import DashboardLayout from './layouts/DashboardLayout';
 import DevicesManager from './features/devices/DevicesManager';
 import MediaLibrary from './features/media/MediaLibrary';
 import PlaylistBuilder from './features/playlists/PlaylistBuilder';
+import IotTelemetry from './features/telemetry/IotTelemetry';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import AdminLayout from './layouts/AdminLayout';
@@ -75,6 +76,7 @@ function App() {
               <Route path="devices" element={<DevicesManager />} />
               <Route path="media" element={<MediaLibrary />} />
               <Route path="playlists" element={<PlaylistBuilder />} />
+              <Route path="telemetry" element={<IotTelemetry />} />
             </Route>
 
             {/* Rutas Protegidas Administrador Global */}

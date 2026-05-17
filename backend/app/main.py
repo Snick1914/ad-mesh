@@ -5,6 +5,7 @@ from app.core.config import settings
 from app.db.session import engine
 from app.db.base_class import Base
 from app.models.user import User # Import models to ensure they are registered with Base
+from app.modules.devices.models import Device
 
 Base.metadata.create_all(bind=engine)
 

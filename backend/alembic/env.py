@@ -7,6 +7,7 @@ from alembic import context
 # Importar Base y Modelos
 from app.db.base_class import Base
 from app.models.user import User  # Importar todos los modelos aquí
+from app.modules.devices.models import Device
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

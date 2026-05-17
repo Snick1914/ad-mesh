@@ -7,6 +7,8 @@ class UserBase(BaseModel):
     is_superuser: bool = False
     full_name: Optional[str] = None
     phone: Optional[str] = None
+    max_devices: Optional[int] = 5
+    max_storage_gb: Optional[int] = 10
 
 class UserCreate(UserBase):
     email: EmailStr
@@ -29,3 +31,10 @@ class Token(BaseModel):
 
 class TokenPayload(BaseModel):
     sub: Optional[int] = None
+
+class UserLimitsUpdate(BaseModel):
+    max_devices: int
+    max_storage_gb: int
+
+class UserStatusUpdate(BaseModel):
+    is_active: bool

@@ -10,3 +10,5 @@ class User(Base):
     is_active = Column(Boolean(), default=True)
     is_superuser = Column(Boolean(), default=False)
     google_id = Column(String, unique=True, index=True, nullable=True)
+    max_devices = Column(Integer, default=5)
+    max_storage_gb = Column(Integer, default=10)

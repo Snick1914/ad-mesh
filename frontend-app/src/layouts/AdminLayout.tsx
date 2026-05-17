@@ -20,10 +20,11 @@ export default function AdminLayout() {
       const base64Url = token.split('.')[1];
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
       const payload = JSON.parse(window.atob(base64));
-      
-      // En un flujo real, el backend valida, pero aquí verificamos en UI
-      setIsAdmin(true); 
+      if (payload) {
+        setIsAdmin(true); 
+      }
     } catch (e) {
+      console.error("Failed to decode token:", e);
       navigate('/login');
     }
   }, [navigate]);

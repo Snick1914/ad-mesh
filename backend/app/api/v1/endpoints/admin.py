@@ -23,8 +23,9 @@ def read_system_summary(
     suspended_users = db.query(User).filter(User.is_active == False).count()
     
     # Calculate screen limits and storage dynamically based on DB values
-    total_allowed_devices = db.query(User).filter(User.is_active == True).sum(User.max_devices) or 0
-    total_allowed_storage = db.query(User).filter(User.is_active == True).sum(User.max_storage_gb) or 0
+    from sqlalchemy import func
+    total_allowed_devices = db.query(func.sum(User.max_devices)).filter(User.is_active == True).scalar() or 0
+    total_allowed_storage = db.query(func.sum(User.max_storage_gb)).filter(User.is_active == True).scalar() or 0
     
     # Realistic telemetric calculation for active screens
     online_screens = int(total_allowed_devices * 0.75)  # Let's say 75% are online

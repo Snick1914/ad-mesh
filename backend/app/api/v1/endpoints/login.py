@@ -60,6 +60,7 @@ def register_user(
         hashed_password=security.get_password_hash(user_in.password),
         full_name=user_in.full_name,
         phone=user_in.phone,
+        company_name=user_in.company_name,
         is_superuser=False,
     )
     db.add(db_obj)
@@ -68,9 +69,11 @@ def register_user(
     return db_obj
 
 from pydantic import BaseModel
+from typing import Optional
 
 class GoogleToken(BaseModel):
     id_token: str
+    company_name: Optional[str] = None
 
 @router.post("/login/google", response_model=Token)
 def login_google(
@@ -97,10 +100,12 @@ def login_google(
         
         if not user:
             # Create new user
+            fallback_company = token_data.company_name or f"Empresa de {full_name}"
             user = User(
                 email=email,
                 full_name=full_name,
                 google_id=google_id,
+                company_name=fallback_company,
                 is_active=True,
                 is_superuser=False,
             )

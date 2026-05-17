@@ -6,6 +6,7 @@ class User(Base):
     full_name = Column(String, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
     phone = Column(String, index=True)
+    company_name = Column(String, index=True, nullable=True)
     hashed_password = Column(String, nullable=True) # Nullable for Google users
     is_active = Column(Boolean(), default=True)
     is_superuser = Column(Boolean(), default=False)

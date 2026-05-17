@@ -26,7 +26,15 @@ Este archivo mantiene el contexto de desarrollo del backend de **ad-mesh**, sigu
 *   **Resultado**: El frontend decodifica el token instantáneamente para:
     1.  Redirigir automáticamente a los superusuarios a `/admin` tras loguearse.
     2.  Pintar dinámicamente el nombre y el correo real del administrador o del cliente en la barra de navegación superior derecha sin requerir consultas de red lentas.
-    3.  Pintar el botón violeta brillante "Consola Admin" al final del sidebar cuando un administrador inspecciona la interfaz del cliente.### 📺 4. Módulo de Dispositivos Modular (`app/modules/devices/`)
+    3.  Pintar el botón violeta brillante "Consola Admin" al final del sidebar cuando un administrador inspecciona la interfaz del cliente.
+
+### 🏢 3.1 Soporte Multi-Tenant: Campo Nombre de Empresa (`company_name`)
+*   **Cambio**: Agregamos soporte nativo para almacenar el nombre de la empresa del cliente en la base de datos.
+*   **Detalles**:
+    *   **Modelo de Base de Datos**: Añadimos la columna `company_name = Column(String, index=True, nullable=True)` al modelo `User`.
+    *   **Registro Tradicional (`/register`)**: Se exige la empresa (`company_name: str` requerida) en el cuerpo del payload.
+    *   **Registro con Google (`/login/google`)**: Se permite que el frontend pase un parámetro opcional `company_name` en la petición. Si no se provee, el backend autogenera un valor por defecto elegante como `"Empresa de {full_name}"` para asegurar que el registro SaaS siempre esté perfectamente estructurado.
+    *   **Migración de Base de Datos**: Creado el script de migración `a3b4c5d6e7f8_add_company_name_to_user.py` listo para su ejecución.### 📺 4. Módulo de Dispositivos Modular (`app/modules/devices/`)
 *   **Cambio**: Implementamos la primera estructura física modular en el backend de **ad-mesh** siguiendo la arquitectura limpia de DYA Cloud.
 *   **Detalles**:
     *   `models.py`: Modelo físico SQLAlchemy para pantallas (`Device`) con número de serie, códigos de emparejamiento, IP, telemetría y relaciones.

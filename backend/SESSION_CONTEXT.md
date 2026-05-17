@@ -35,11 +35,20 @@ Este archivo mantiene el contexto de desarrollo del backend de **ad-mesh**, sigu
     *   `endpoints/device_endpoints.py`: Endpoints limpios de API FastAPI.
     *   `alembic/versions/0f146c671298_add_device_model.py`: Migración de base de datos creada y lista para ejecutarse automáticamente.
 
+### 📅 5. Módulo de Playlists Modular (`app/modules/playlists/`)
+*   **Cambio**: Implementamos el motor relacional de listas de reproducción y campañas bajo la arquitectura modular DYA Cloud.
+*   **Detalles**:
+    *   `models.py`: Modelos físicos SQLAlchemy `Playlist` y `PlaylistItem` para gestionar secuencias ordenadas y tiempos de transición por pantalla con borrado seguro en cascada.
+    *   `schemas.py`: Esquemas de entrada y salidas serializadas anidadas.
+    *   `services/playlist_service.py`: Lógica transaccional de ordenamiento y control estricto de propiedad de medios.
+    *   `endpoints/playlist_endpoints.py`: Endpoints limpios de API (Creación, modificación secuencial y borrado).
+    *   `alembic/versions/f23b45678c9d_add_playlist_models.py`: Migración de base de datos creada y lista para su aplicación.
+
 ---
 
 ## 🗺️ Próximos Pasos y Roadmap
 
 1.  **Refactorización a Estructura Modular (`app/modules/`)**:
-    *   Continuar con la biblioteca de medios (`app/modules/media/`) y playlists siguiendo el mismo estándar modular.
+    *   Continuar con la refactorización de otros módulos si se desea o enlazar las playlists con el reproductor físico para iniciar descargas automáticas en las pantallas.
 2.  **Sincronización de Estructuras SQL**:
     *   Mantener el archivo `structure_auth.sql` sincronizado con cualquier migración nueva de Alembic para asegurar la recreación rápida del contenedor de base de datos desde cero.

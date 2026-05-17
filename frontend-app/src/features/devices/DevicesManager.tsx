@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Plus, MonitorPlay, Wifi, WifiOff, RefreshCw, ServerCog, X, Loader2 } from 'lucide-react';
 import type { Device, DeviceStatus } from '../../types';
 
@@ -34,7 +34,7 @@ export default function DevicesManager() {
         id: String(d.id),
         serialNumber: d.serial_number,
         name: d.name || 'Sin nombre',
-        status: d.status || 'offline',
+        status: (d.status as DeviceStatus) || 'offline',
         lastHeartbeat: d.last_heartbeat 
           ? new Date(d.last_heartbeat).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
           : 'Nunca',
@@ -109,9 +109,18 @@ export default function DevicesManager() {
 
   return (
     <div className="flex flex-col h-full space-y-6">
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl text-sm text-center">
+          {error}
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Dispositivos</h1>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            Dispositivos
+            {isLoading && <Loader2 className="w-5 h-5 text-[#00F0FF] animate-spin" />}
+          </h1>
           <p className="text-gray-400 text-sm mt-1">Gestiona tus reproductores y monitorea su estado de almacenamiento y conexión.</p>
         </div>
         <button 

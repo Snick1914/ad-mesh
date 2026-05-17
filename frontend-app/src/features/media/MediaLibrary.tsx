@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { UploadCloud, Image as ImageIcon, Video, Trash2, Clock, HardDrive, Search, Film, Loader2 } from 'lucide-react';
-import type { MediaItem } from '../../types';
+import type { MediaItem, MediaType } from '../../types';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
@@ -33,7 +33,7 @@ export default function MediaLibrary() {
         id: String(d.id),
         name: d.name,
         url: d.file_path.startsWith('http') ? d.file_path : `${API_URL.replace('/api/v1', '')}/${d.file_path}`,
-        type: d.file_type.startsWith('video') ? 'video' : 'image',
+        type: (d.file_type.startsWith('video') ? 'video' : 'image') as MediaType,
         size: Number((d.file_size_bytes / (1024 * 1024)).toFixed(2)),
         duration: d.file_type.startsWith('video') ? 15 : undefined,
       }));
@@ -162,7 +162,10 @@ export default function MediaLibrary() {
       
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Biblioteca de Medios</h1>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            Biblioteca de Medios
+            {isLoading && <Loader2 className="w-5 h-5 text-[#00F0FF] animate-spin" />}
+          </h1>
           <p className="text-gray-400 text-sm mt-1">Sube y gestiona tus videos e imágenes para las listas de reproducción.</p>
         </div>
         <div className="flex items-center gap-4 bg-[#161C2D] border border-white/5 rounded-xl px-4 py-2 text-sm">

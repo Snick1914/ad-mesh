@@ -11,11 +11,9 @@ interface SummaryData {
 export default function AdminDashboard() {
   const [data, setData] = useState<SummaryData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
 
   const fetchSummary = async () => {
     setIsLoading(true);
-    setError('');
     const token = localStorage.getItem('token');
     const apiUrl = import.meta.env.VITE_API_URL || '/api/v1';
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, Activity, LogOut, Menu, X, Bell, User, ShieldAlert } from 'lucide-react';
+import { LayoutDashboard, Users, LogOut, Menu, X, Bell, User, ShieldAlert } from 'lucide-react';
 
 export default function AdminLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);

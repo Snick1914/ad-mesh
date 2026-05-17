@@ -90,6 +90,7 @@ export default function AdminUsersManager() {
       setUsers(users.map(u => u.id === updatedUser.id ? updatedUser : u));
       setEditingUser(null);
     } catch (err) {
+      console.warn("Using fallback edit limits:", err);
       // Local fallback edit
       setUsers(users.map(u => u.id === editingUser.id ? { ...u, max_devices: maxDevices, max_storage_gb: maxStorage } : u));
       setEditingUser(null);
@@ -119,6 +120,7 @@ export default function AdminUsersManager() {
       const updatedUser = await response.json();
       setUsers(users.map(u => u.id === updatedUser.id ? updatedUser : u));
     } catch (err) {
+      console.warn("Using fallback toggle status:", err);
       // Local fallback change
       setUsers(users.map(u => u.id === user.id ? { ...u, is_active: newStatus } : u));
     }
@@ -143,6 +145,7 @@ export default function AdminUsersManager() {
       localStorage.setItem('token', data.access_token);
       window.location.href = '/devices';
     } catch (err) {
+      console.error("Impersonate failed:", err);
       alert("La simulación de soporte solo está disponible con el servidor conectado.");
     }
   };

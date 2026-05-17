@@ -19,6 +19,20 @@ export default function LoginForm() {
     try {
       const data = await AuthService.login(email, password);
       localStorage.setItem('token', data.access_token);
+      
+      // Decodificar rol para redirección inteligente
+      try {
+        const base64Url = data.access_token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const payload = JSON.parse(window.atob(base64));
+        if (payload && payload.is_superuser) {
+          navigate('/admin');
+          return;
+        }
+      } catch (e) {
+        console.warn("Could not decode role, redirecting to devices by default:", e);
+      }
+      
       navigate('/devices');
     } catch (err: any) {
       setError(err.message);
@@ -33,6 +47,20 @@ export default function LoginForm() {
     try {
       const data = await AuthService.loginWithGoogle(credentialResponse.credential);
       localStorage.setItem('token', data.access_token);
+      
+      // Decodificar rol para redirección inteligente
+      try {
+        const base64Url = data.access_token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const payload = JSON.parse(window.atob(base64));
+        if (payload && payload.is_superuser) {
+          navigate('/admin');
+          return;
+        }
+      } catch (e) {
+        console.warn("Could not decode role, redirecting to devices by default:", e);
+      }
+
       navigate('/devices');
     } catch (err: any) {
       setError(err.message);

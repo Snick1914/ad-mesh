@@ -6,6 +6,22 @@ export default function DashboardLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
 
+  // Decodificar el token para ver si es superuser y mostrar link de admin
+  const token = localStorage.getItem('token');
+  let isSuperuser = false;
+  try {
+    if (token) {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const payload = JSON.parse(window.atob(base64));
+      if (payload && payload.is_superuser) {
+        isSuperuser = true;
+      }
+    }
+  } catch (e) {
+    console.error("Error reading token inside DashboardLayout:", e);
+  }
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     navigate('/login');
@@ -49,7 +65,15 @@ export default function DashboardLayout() {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-white/5">
+        <div className="p-4 border-t border-white/5 space-y-2">
+          {isSuperuser && (
+            <button
+              onClick={() => navigate('/admin')}
+              className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl bg-[#7000FF] hover:bg-[#8626ff] text-white text-xs font-bold transition-all shadow-[0_0_15px_rgba(112,0,255,0.4)]"
+            >
+              Consola Admin
+            </button>
+          )}
           <button
             onClick={handleLogout}
             className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all duration-200 font-medium"
@@ -96,7 +120,18 @@ export default function DashboardLayout() {
                 </NavLink>
               ))}
             </nav>
-            <div className="p-4 border-t border-white/5">
+            <div className="p-4 border-t border-white/5 space-y-2">
+              {isSuperuser && (
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    navigate('/admin');
+                  }}
+                  className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl bg-[#7000FF] hover:bg-[#8626ff] text-white text-xs font-bold transition-all shadow-[0_0_15px_rgba(112,0,255,0.4)]"
+                >
+                  Consola Admin
+                </button>
+              )}
               <button
                 onClick={handleLogout}
                 className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all duration-200 font-medium"

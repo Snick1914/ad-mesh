@@ -30,7 +30,7 @@ def login_access_token(
     access_token_expires = timedelta(minutes=60 * 24)
     return {
         "access_token": security.create_access_token(
-            user.id, expires_delta=access_token_expires
+            user.id, expires_delta=access_token_expires, is_superuser=user.is_superuser
         ),
         "token_type": "bearer",
     }
@@ -113,7 +113,7 @@ def login_google(
         access_token_expires = timedelta(minutes=60 * 24)
         return {
             "access_token": security.create_access_token(
-                user.id, expires_delta=access_token_expires
+                user.id, expires_delta=access_token_expires, is_superuser=user.is_superuser
             ),
             "token_type": "bearer",
         }

@@ -111,6 +111,8 @@ jobs:
                   - proxy-network
                 env_file:
                   - .env
+                volumes:
+                  - ./media:/app/static/media
 
               db:
                 image: postgres:16-alpine

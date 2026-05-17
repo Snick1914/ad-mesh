@@ -23,6 +23,8 @@ services:
     networks:
       - ad-mesh-network
       - proxy-network
+    volumes:
+      - ./media:/app/static/media
 
   db:
     image: postgres:16-alpine

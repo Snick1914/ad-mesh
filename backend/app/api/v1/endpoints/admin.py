@@ -160,7 +160,11 @@ def impersonate_user(
     access_token_expires = timedelta(minutes=60)
     return {
         "access_token": security.create_access_token(
-            user.id, expires_delta=access_token_expires
+            user.id,
+            email=user.email,
+            full_name=user.full_name or "",
+            expires_delta=access_token_expires,
+            is_superuser=user.is_superuser
         ),
         "token_type": "bearer",
     }

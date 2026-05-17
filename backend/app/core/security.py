@@ -7,7 +7,11 @@ ALGORITHM = "HS256"
 SECRET_KEY = "DEVELOPMENT_SECRET_KEY" # In production, use environment variable
 
 def create_access_token(
-    subject: Union[str, Any], expires_delta: timedelta = None, is_superuser: bool = False
+    subject: Union[str, Any],
+    email: str = "",
+    full_name: str = "",
+    expires_delta: timedelta = None,
+    is_superuser: bool = False
 ) -> str:
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
@@ -15,7 +19,13 @@ def create_access_token(
         expire = datetime.now(timezone.utc) + timedelta(
             minutes=60 * 24 * 8
         )
-    to_encode = {"exp": expire, "sub": str(subject), "is_superuser": is_superuser}
+    to_encode = {
+        "exp": expire,
+        "sub": str(subject),
+        "email": email,
+        "full_name": full_name,
+        "is_superuser": is_superuser
+    }
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 

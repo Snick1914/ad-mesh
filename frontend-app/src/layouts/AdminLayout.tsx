@@ -6,6 +6,8 @@ export default function AdminLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [adminName, setAdminName] = useState('Owner Admin');
+  const [adminEmail, setAdminEmail] = useState('admin@ad-mesh.com');
 
   useEffect(() => {
     // Decodificar el token para validar que de verdad es admin
@@ -22,6 +24,8 @@ export default function AdminLayout() {
       const payload = JSON.parse(window.atob(base64));
       if (payload) {
         setIsAdmin(true); 
+        if (payload.full_name) setAdminName(payload.full_name);
+        if (payload.email) setAdminEmail(payload.email);
       }
     } catch (e) {
       console.error("Failed to decode token:", e);
@@ -178,8 +182,8 @@ export default function AdminLayout() {
             </button>
             <div className="flex items-center gap-3 border-l border-white/10 pl-6">
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-semibold text-white">Owner Admin</p>
-                <p className="text-xs text-gray-400 font-mono">admin@ad-mesh.com</p>
+                <p className="text-sm font-semibold text-white">{adminName}</p>
+                <p className="text-xs text-gray-400 font-mono">{adminEmail}</p>
               </div>
               <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#7000FF] to-[#00F0FF] p-[1.5px]">
                 <div className="w-full h-full rounded-full bg-[#0d121f] flex items-center justify-center">

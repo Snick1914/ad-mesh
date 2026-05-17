@@ -237,7 +237,17 @@ export default function MediaLibrary() {
               {item.type === 'video' ? (
                 <Video className="w-10 h-10 text-gray-500/50" />
               ) : (
-                <ImageIcon className="w-10 h-10 text-gray-500/50" />
+                <>
+                  <ImageIcon className="w-10 h-10 text-gray-500/50 absolute" />
+                  <img 
+                    src={item.url} 
+                    alt={item.name} 
+                    className="absolute inset-0 w-full h-full object-cover z-10"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                </>
               )}
               
               <div className="absolute top-2 left-2 flex gap-1">

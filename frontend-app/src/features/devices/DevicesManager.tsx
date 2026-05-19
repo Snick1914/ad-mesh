@@ -37,23 +37,6 @@ export default function DevicesManager() {
   const [isSavingConfig, setIsSavingConfig] = useState(false);
   const [configSuccess, setConfigSuccess] = useState(false);
 
-  // Cargar configuraciones de dispositivo desde LocalStorage para persistencia interactiva
-  const getDeviceConfig = (deviceId: string): DeviceConfig => {
-    const saved = localStorage.getItem(`device_config_${deviceId}`);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return {
-      resolution: '1920x1080',
-      layout: 'single',
-      zonePlaylists: { zoneA: '', zoneB: '', zoneC: '' }
-    };
-  };
-
   const fetchDevices = async () => {
     setIsLoading(true);
     setError('');
@@ -78,6 +61,11 @@ export default function DevicesManager() {
           : 'Nunca',
         storageUsed: d.storage_used_gb,
         storageTotal: d.storage_limit_gb,
+        resolution: d.resolution,
+        layout: d.layout,
+        playlist_id: d.playlist_id,
+        playlist_b_id: d.playlist_b_id,
+        playlist_c_id: d.playlist_c_id,
       }));
       setDevices(mapped);
     } catch (err: any) {
@@ -112,8 +100,15 @@ export default function DevicesManager() {
   // Al abrir el drawer de configuración de un dispositivo
   useEffect(() => {
     if (selectedDevice) {
-      const config = getDeviceConfig(selectedDevice.id);
-      setDeviceConfig(config);
+      setDeviceConfig({
+        resolution: selectedDevice.resolution || '1920x1080',
+        layout: selectedDevice.layout || 'single',
+        zonePlaylists: {
+          zoneA: selectedDevice.playlist_id ? String(selectedDevice.playlist_id) : '',
+          zoneB: selectedDevice.playlist_b_id ? String(selectedDevice.playlist_b_id) : '',
+          zoneC: selectedDevice.playlist_c_id ? String(selectedDevice.playlist_c_id) : ''
+        }
+      });
       setConfigSuccess(false);
     }
   }, [selectedDevice]);
@@ -123,25 +118,44 @@ export default function DevicesManager() {
     if (!selectedDevice) return;
     setIsSavingConfig(true);
     setConfigSuccess(false);
+    setError('');
     
-    // Simular guardado y sincronización con el Daemon de la Raspberry Pi
-    setTimeout(() => {
-      localStorage.setItem(`device_config_${selectedDevice.id}`, JSON.stringify(deviceConfig));
-      setIsSavingConfig(false);
+    try {
+      const token = localStorage.getItem('token');
+      const payload = {
+        resolution: deviceConfig.resolution,
+        layout: deviceConfig.layout,
+        playlist_id: deviceConfig.zonePlaylists.zoneA ? parseInt(deviceConfig.zonePlaylists.zoneA) : null,
+        playlist_b_id: deviceConfig.zonePlaylists.zoneB ? parseInt(deviceConfig.zonePlaylists.zoneB) : null,
+        playlist_c_id: deviceConfig.zonePlaylists.zoneC ? parseInt(deviceConfig.zonePlaylists.zoneC) : null,
+      };
+
+      const response = await fetch(`${API_URL}/devices/${selectedDevice.id}/config`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.detail || 'Error al guardar la configuración.');
+      }
+
       setConfigSuccess(true);
-      
-      // Simular cambio temporal del dispositivo a estado "syncing" para dar sensación premium
-      setDevices(prev => prev.map(d => d.id === selectedDevice.id ? { ...d, status: 'syncing' } : d));
-      
-      setTimeout(() => {
-        setDevices(prev => prev.map(d => d.id === selectedDevice.id ? { ...d, status: 'online', lastHeartbeat: 'Justo ahora' } : d));
-      }, 2500);
+      await fetchDevices();
       
       setTimeout(() => {
         setConfigSuccess(false);
         setSelectedDevice(null);
       }, 1500);
-    }, 1200);
+    } catch (err: any) {
+      setError(err.message || 'Error de conexión.');
+    } finally {
+      setIsSavingConfig(false);
+    }
   };
 
   const handleLinkDevice = async (e: React.FormEvent) => {
@@ -320,7 +334,15 @@ export default function DevicesManager() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {filteredDevices.map(device => {
-          const config = getDeviceConfig(device.id);
+          const config = {
+            layout: device.layout || 'single',
+            resolution: device.resolution || '1920x1080',
+            zonePlaylists: {
+              zoneA: device.playlist_id ? String(device.playlist_id) : '',
+              zoneB: device.playlist_b_id ? String(device.playlist_b_id) : '',
+              zoneC: device.playlist_c_id ? String(device.playlist_c_id) : ''
+            }
+          };
           return (
             <div 
               key={device.id} 

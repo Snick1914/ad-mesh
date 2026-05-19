@@ -6,7 +6,8 @@ from app.api import deps
 from app.models.user import User
 from app.modules.devices.schemas import (
     DeviceOut, DevicePairRequest, DevicePairResponse, 
-    PairingCodeRequest, PairingCodeResponse, DeviceHeartbeat
+    PairingCodeRequest, PairingCodeResponse, DeviceHeartbeat,
+    DeviceConfigUpdate
 )
 from app.modules.devices.services.device_service import DeviceService
 
@@ -82,6 +83,40 @@ def player_heartbeat(
         status=payload.status
     )
 
+def _serialize_playlist_helper(playlist_id: int | None, db: Session):
+    if not playlist_id:
+        return {
+            "playlist_id": None,
+            "name": "Sin Playlist",
+            "items": []
+        }
+    from app.modules.playlists.models import Playlist
+    playlist = db.query(Playlist).filter(Playlist.id == playlist_id).first()
+    if not playlist:
+        return {
+            "playlist_id": None,
+            "name": "Sin Playlist",
+            "items": []
+        }
+    
+    items = []
+    for item in playlist.items:
+        if not item.media.is_deleted:
+            items.append({
+                "id": item.id,
+                "media_id": item.media_id,
+                "name": item.media.name,
+                "file_path": item.media.file_path,
+                "file_type": item.media.file_type,
+                "position": item.position,
+                "duration_seconds": item.duration_seconds
+            })
+    return {
+        "playlist_id": playlist.id,
+        "name": playlist.name,
+        "items": items
+    }
+
 @router.get("/{serial_number}/playlist")
 def get_device_playlist(
     serial_number: str,
@@ -103,36 +138,50 @@ def get_device_playlist(
             detail="El dispositivo no está emparejado."
         )
 
-    # Buscar la lista de reproducción activa del usuario
-    from app.modules.playlists.models import Playlist
-    playlist = db.query(Playlist).filter(
-        Playlist.user_id == device.user_id,
-        Playlist.is_active == True
-    ).first()
-
-    if not playlist:
-        return {
-            "playlist_id": None,
-            "name": "Sin Playlist Activa",
-            "items": []
-        }
-
-    # Serializar los elementos con sus recursos
-    items = []
-    for item in playlist.items:
-        if not item.media.is_deleted:
-            items.append({
-                "id": item.id,
-                "media_id": item.media_id,
-                "name": item.media.name,
-                "file_path": item.media.file_path,
-                "file_type": item.media.file_type,
-                "position": item.position,
-                "duration_seconds": item.duration_seconds
-            })
+    # Si no tiene una playlist principal asignada, buscar la activa general del usuario como fallback
+    playlist_id = device.playlist_id
+    if not playlist_id:
+        from app.modules.playlists.models import Playlist
+        active_p = db.query(Playlist).filter(
+            Playlist.user_id == device.user_id,
+            Playlist.is_active == True
+        ).first()
+        if active_p:
+            playlist_id = active_p.id
 
     return {
-        "playlist_id": playlist.id,
-        "name": playlist.name,
-        "items": items
+        "serial_number": device.serial_number,
+        "resolution": device.resolution,
+        "layout": device.layout,
+        "playlist_id": playlist_id, # compatible con reproductores heredados de zona única
+        "zone_a": _serialize_playlist_helper(playlist_id, db),
+        "zone_b": _serialize_playlist_helper(device.playlist_b_id, db),
+        "zone_c": _serialize_playlist_helper(device.playlist_c_id, db),
     }
+
+@router.put("/{device_id}/config", response_model=DeviceOut)
+def update_device_configuration(
+    device_id: int,
+    payload: DeviceConfigUpdate,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    """
+    Actualizar la resolución, el diseño de pantalla (layout) y las playlists de un dispositivo.
+    """
+    service = DeviceService(db)
+    success, message, device = service.update_device_config(
+        device_id=device_id,
+        user_id=current_user.id,
+        resolution=payload.resolution,
+        layout=payload.layout,
+        playlist_id=payload.playlist_id,
+        playlist_b_id=payload.playlist_b_id,
+        playlist_c_id=payload.playlist_c_id
+    )
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=message
+        )
+    return device

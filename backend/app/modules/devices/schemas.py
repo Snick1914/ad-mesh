@@ -22,9 +22,21 @@ class DeviceOut(BaseModel):
     ip_address: Optional[str]
     storage_used_gb: float
     storage_limit_gb: float
+    resolution: str
+    layout: str
+    playlist_id: Optional[int]
+    playlist_b_id: Optional[int]
+    playlist_c_id: Optional[int]
 
     class Config:
         from_attributes = True
+
+class DeviceConfigUpdate(BaseModel):
+    resolution: Optional[str] = None
+    layout: Optional[str] = None
+    playlist_id: Optional[int] = None
+    playlist_b_id: Optional[int] = None
+    playlist_c_id: Optional[int] = None
 
 class DevicePairRequest(BaseModel):
     pairing_code: str

@@ -16,6 +16,11 @@ export interface Device {
   currentPlaylistId?: string;
   storageUsed: number; // in GB
   storageTotal: number; // in GB
+  resolution?: string;
+  layout?: 'single' | 'split-h' | 'split-v' | 'l-shape';
+  playlist_id?: number | null;
+  playlist_b_id?: number | null;
+  playlist_c_id?: number | null;
 }
 
 export type MediaType = 'video' | 'image';

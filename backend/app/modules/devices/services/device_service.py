@@ -98,3 +98,24 @@ class DeviceService:
         self.db.commit()
         self.db.refresh(device)
         return device
+
+    def update_device_config(self, device_id: int, user_id: int, resolution: str = None, layout: str = None, playlist_id: int = None, playlist_b_id: int = None, playlist_c_id: int = None) -> tuple[bool, str, Device]:
+        device = self.get_by_id(device_id)
+        if not device:
+            return False, "Dispositivo no encontrado.", None
+        if device.user_id != user_id:
+            return False, "No tienes permisos para modificar este dispositivo.", None
+
+        if resolution is not None:
+            device.resolution = resolution
+        if layout is not None:
+            device.layout = layout
+        
+        device.playlist_id = playlist_id if playlist_id and playlist_id > 0 else None
+        device.playlist_b_id = playlist_b_id if playlist_b_id and playlist_b_id > 0 else None
+        device.playlist_c_id = playlist_c_id if playlist_c_id and playlist_c_id > 0 else None
+
+        self.db.add(device)
+        self.db.commit()
+        self.db.refresh(device)
+        return True, "Configuración de dispositivo actualizada con éxito.", device

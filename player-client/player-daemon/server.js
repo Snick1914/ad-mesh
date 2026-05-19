@@ -183,47 +183,63 @@ const syncLoop = async () => {
     // 4. Obtener Playlist asignada
     console.log(`[PLAYLIST] Buscando playlist activa...`);
     const playlistResponse = await axios.get(`${BACKEND_URL}/devices/${DEVICE_SERIAL}/playlist`);
-    const activePlaylist = playlistResponse.data;
+    const activeConfig = playlistResponse.data;
 
-    if (!activePlaylist.playlist_id) {
+    // Verificar si hay alguna playlist en cualquier zona
+    const hasPlaylist = activeConfig.zone_a?.playlist_id || activeConfig.zone_b?.playlist_id || activeConfig.zone_c?.playlist_id;
+
+    if (!hasPlaylist) {
       console.log(`[PLAYLIST] Sin playlist activa asignada en el servidor.`);
-      fs.writeFileSync(PLAYLIST_FILE, JSON.stringify({ playlist_id: null, items: [] }, null, 2));
+      fs.writeFileSync(PLAYLIST_FILE, JSON.stringify({ layout: 'single', resolution: '1920x1080', zone_a: { items: [] }, zone_b: { items: [] }, zone_c: { items: [] } }, null, 2));
       isSyncing = false;
       return;
     }
 
-    // 5. Comparar y descargar archivos multimedia faltantes
     const backendBaseUrl = BACKEND_URL.replace('/api/v1', ''); // Limpia URL para descargar recursos estáticos
-    const downloadedItems = [];
     const mediaFilesOnServer = [];
 
-    for (const item of activePlaylist.items) {
-      const fileName = path.basename(item.file_path);
-      const localFilePath = path.join(MEDIA_DIR, fileName);
-      const absoluteMediaUrl = `${backendBaseUrl}/${item.file_path}`;
-      
-      mediaFilesOnServer.push(fileName);
+    // Helper para procesar y descargar elementos de una zona
+    const processZone = async (zoneData) => {
+      if (!zoneData || !zoneData.items) return { playlist_id: null, name: "Sin Playlist", items: [] };
+      const downloadedItems = [];
+      for (const item of zoneData.items) {
+        const fileName = path.basename(item.file_path);
+        const localFilePath = path.join(MEDIA_DIR, fileName);
+        const absoluteMediaUrl = `${backendBaseUrl}/${item.file_path}`;
+        
+        mediaFilesOnServer.push(fileName);
 
-      // Descargar archivo si no existe localmente
-      if (!fs.existsSync(localFilePath)) {
-        try {
-          await downloadFile(absoluteMediaUrl, localFilePath);
-          console.log(`[DESCARGAS] Sincronizado con éxito: ${fileName}`);
-        } catch (downloadErr) {
-          console.error(`[DESCARGAS] Error descargando archivo ${fileName}:`, downloadErr.message);
-          continue; // Intentar con el siguiente
+        // Descargar archivo si no existe localmente
+        if (!fs.existsSync(localFilePath)) {
+          try {
+            await downloadFile(absoluteMediaUrl, localFilePath);
+            console.log(`[DESCARGAS] Sincronizado con éxito: ${fileName}`);
+          } catch (downloadErr) {
+            console.error(`[DESCARGAS] Error descargando archivo ${fileName}:`, downloadErr.message);
+            continue; // Intentar con el siguiente
+          }
         }
-      }
 
-      downloadedItems.push({
-        id: item.id,
-        name: item.name,
-        local_path: `/media/${fileName}`, // Ruta accesible desde el servidor local de la Pi
-        file_type: item.file_type,
-        position: item.position,
-        duration_seconds: item.duration_seconds
-      });
-    }
+        downloadedItems.push({
+          id: item.id,
+          name: item.name,
+          local_path: `/media/${fileName}`, // Ruta accesible desde el servidor local de la Pi
+          file_type: item.file_type,
+          position: item.position,
+          duration_seconds: item.duration_seconds
+        });
+      }
+      return {
+        playlist_id: zoneData.playlist_id,
+        name: zoneData.name,
+        items: downloadedItems
+      };
+    };
+
+    console.log(`[PLAYLIST] Procesando y descargando recursos de zonas...`);
+    const zoneA = await processZone(activeConfig.zone_a);
+    const zoneB = await processZone(activeConfig.zone_b);
+    const zoneC = await processZone(activeConfig.zone_c);
 
     // 6. Limpiar archivos huérfanos del HDD (videos antiguos que ya no se usan)
     try {
@@ -239,14 +255,21 @@ const syncLoop = async () => {
     }
 
     // 7. Guardar la nueva estructura local
-    const localPlaylist = {
-      playlist_id: activePlaylist.playlist_id,
-      name: activePlaylist.name,
-      items: downloadedItems
+    const localConfig = {
+      serial_number: DEVICE_SERIAL,
+      layout: activeConfig.layout || 'single',
+      resolution: activeConfig.resolution || '1920x1080',
+      zone_a: zoneA,
+      zone_b: zoneB,
+      zone_c: zoneC,
+      // Mapear compatibilidad para reproductores heredados que esperan single playlist a nivel raíz
+      playlist_id: zoneA.playlist_id,
+      name: zoneA.name,
+      items: zoneA.items
     };
 
-    fs.writeFileSync(PLAYLIST_FILE, JSON.stringify(localPlaylist, null, 2));
-    console.log(`[PLAYLIST] Playlist "${activePlaylist.name}" sincronizada localmente en el HDD con éxito.`);
+    fs.writeFileSync(PLAYLIST_FILE, JSON.stringify(localConfig, null, 2));
+    console.log(`[PLAYLIST] Configuración multi-zona (${activeConfig.layout}) sincronizada con éxito.`);
 
   } catch (err) {
     console.error(`[🔄 BUCLE] Error general en el bucle de sincronización:`, err.message);

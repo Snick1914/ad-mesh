@@ -214,3 +214,95 @@ p {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* --- 📐 DISTRIBUCIONES DE PANTALLA MULTI-ZONA REALES (GPU ACELERADO) --- */
+#player-container.single {
+  display: block;
+}
+
+#player-container.split-h {
+  display: flex;
+  flex-direction: column;
+}
+#player-container.split-h .zone-container {
+  width: 100%;
+  height: 50%;
+  position: relative;
+  overflow: hidden;
+}
+#player-container.split-h #zone-a {
+  border-bottom: 2px solid rgba(0, 240, 255, 0.4);
+}
+
+#player-container.split-v {
+  display: flex;
+  flex-direction: row;
+}
+#player-container.split-v .zone-container {
+  width: 50%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+#player-container.split-v #zone-a {
+  border-right: 2px solid rgba(0, 240, 255, 0.4);
+}
+
+#player-container.l-shape {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: #000;
+}
+#player-container.l-shape .top-row {
+  display: flex;
+  flex-direction: row;
+  height: 85%; /* 85% para Zona Principal y Lateral */
+  width: 100%;
+}
+#player-container.l-shape #zone-a {
+  width: 70%; /* 70% ancho Zona Principal */
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  border-right: 2px solid rgba(0, 240, 255, 0.4);
+  border-bottom: 2px solid rgba(0, 240, 255, 0.4);
+}
+#player-container.l-shape #zone-b {
+  width: 30%; /* 30% ancho Zona Lateral */
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  border-bottom: 2px solid rgba(0, 240, 255, 0.4);
+}
+#player-container.l-shape #zone-c {
+  width: 100%;
+  height: 15%; /* 15% Cintillo Inferior */
+  position: relative;
+  overflow: hidden;
+}
+
+/* --- 🧬 CAPAS DENTRO DE CADA ZONA (CROSS-FADE ULTRARRÁPIDO) --- */
+.zone-container {
+  background-color: #000000;
+  position: relative;
+}
+
+.zone-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  z-index: 1;
+  background-color: #000000;
+  transition: opacity 0.25s ease-in-out; /* 250ms snap-fade, previene flickering y optimiza GPU del Pi */
+  will-change: opacity;
+}
+
+.zone-layer.active {
+  opacity: 1;
+  z-index: 2;
+}

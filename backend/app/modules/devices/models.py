@@ -16,5 +16,12 @@ class Device(Base):
     ip_address = Column(String, nullable=True)
     storage_used_gb = Column(Float, default=0.0)
     storage_limit_gb = Column(Float, default=10.0)
+    
+    # Ajustes reales de distribución y listas de reproducción
+    resolution = Column(String, default="1920x1080", nullable=False)
+    layout = Column(String, default="single", nullable=False)
+    playlist_id = Column(Integer, ForeignKey("playlist.id", ondelete="SET NULL"), nullable=True)
+    playlist_b_id = Column(Integer, ForeignKey("playlist.id", ondelete="SET NULL"), nullable=True)
+    playlist_c_id = Column(Integer, ForeignKey("playlist.id", ondelete="SET NULL"), nullable=True)
 
     user = relationship("User", backref="devices")

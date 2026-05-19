@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, MonitorPlay, Wifi, WifiOff, RefreshCw, ServerCog, X, Loader2, Settings, Columns, Maximize, Layout, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Search, Plus, MonitorPlay, Wifi, WifiOff, RefreshCw, ServerCog, X, Loader2, Settings, Columns, Maximize, Layout, CheckCircle2 } from 'lucide-react';
 import type { Device, DeviceStatus } from '../../types';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api/v1';

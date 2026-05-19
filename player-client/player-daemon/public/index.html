@@ -145,34 +145,12 @@
         nextLayerEl.innerHTML = '';
 
         let el;
-        if (item.file_type.startsWith('video')) {
-          el = document.createElement('video');
-          el.src = item.local_path;
-          el.autoplay = true;
-          el.muted = true;
-          el.playsInline = true;
-          
-          // OPTIMIZACIÓN DE LOOP NATIVO: Si la playlist de esta zona tiene UN SOLO video,
-          // usamos la propiedad "loop" nativa de HTML5 para evitar refrescar la capa
-          // y erradicar al 100% el parpadeo en Raspberry Pi.
-          if (items.length === 1) {
-            el.loop = true;
-          }
-
-          el.style.width = '100%';
-          el.style.height = '100%';
-          el.style.objectFit = 'cover';
-        } else {
-          el = document.createElement('img');
-          el.src = item.local_path;
-          el.style.width = '100%';
-          el.style.height = '100%';
-          el.style.objectFit = 'cover';
-        }
-
-        nextLayerEl.appendChild(el);
+        let loaded = false;
 
         const triggerTransition = () => {
+          if (loaded) return;
+          loaded = true;
+
           // Cross-fade instantáneo / ultrarrápido
           nextLayerEl.classList.add('active');
           currentLayerEl.classList.remove('active');
@@ -200,18 +178,39 @@
         };
 
         if (item.file_type.startsWith('video')) {
+          el = document.createElement('video');
+          el.autoplay = true;
+          el.muted = true;
+          el.playsInline = true;
+          
+          // OPTIMIZACIÓN DE LOOP NATIVO: Si la playlist de esta zona tiene UN SOLO video,
+          // usamos la propiedad "loop" nativa de HTML5 para evitar refrescar la capa.
+          if (items.length === 1) {
+            el.loop = true;
+          }
+
+          el.style.width = '100%';
+          el.style.height = '100%';
+          el.style.objectFit = 'cover';
+          
           el.oncanplaythrough = triggerTransition;
+          el.src = item.local_path; // Set src AFTER event listener definition
         } else {
+          el = document.createElement('img');
+          el.style.width = '100%';
+          el.style.height = '100%';
+          el.style.objectFit = 'cover';
+          
           el.onload = triggerTransition;
+          el.src = item.local_path; // Set src AFTER event listener definition
         }
 
-        // Fallback si la carga del archivo demora en exceso
+        nextLayerEl.appendChild(el);
+
+        // Fallback robusto e incondicional si el archivo no dispara eventos o falla
         setTimeout(() => {
-          const currentActiveLayerEl = this.activeLayer === 'a' ? this.layerB : this.layerA;
-          if (currentActiveLayerEl !== nextLayerEl && this.currentIndex === nextIndex) {
-            triggerTransition();
-          }
-        }, 3500);
+          triggerTransition();
+        }, 3000);
       }
     }
 

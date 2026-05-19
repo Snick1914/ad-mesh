@@ -50,7 +50,8 @@ def update_playlist_items(
     success, message, playlist = service.update_playlist_items(
         user_id=current_user.id,
         playlist_id=playlist_id,
-        items_in=payload.items
+        items_in=payload.items,
+        name=payload.name
     )
     if not success:
         raise HTTPException(

@@ -14,6 +14,13 @@ class PlaylistService:
         return self.db.query(Playlist).filter(Playlist.user_id == user_id).order_by(Playlist.created_at.desc()).all()
 
     def create_playlist(self, user_id: int, name: str, is_active: bool = True) -> Playlist:
+        if is_active:
+            # Desactivar otras playlists activas de este usuario para que la nueva sea la única activa
+            self.db.query(Playlist).filter(
+                Playlist.user_id == user_id,
+                Playlist.is_active == True
+            ).update({"is_active": False})
+
         playlist = Playlist(
             name=name,
             is_active=is_active,
@@ -24,10 +31,13 @@ class PlaylistService:
         self.db.refresh(playlist)
         return playlist
 
-    def update_playlist_items(self, user_id: int, playlist_id: int, items_in: list[PlaylistItemCreate]) -> tuple[bool, str, Playlist]:
+    def update_playlist_items(self, user_id: int, playlist_id: int, items_in: list[PlaylistItemCreate], name: str = None) -> tuple[bool, str, Playlist]:
         playlist = self.db.query(Playlist).filter(Playlist.id == playlist_id, Playlist.user_id == user_id).first()
         if not playlist:
             return False, "La lista de reproducción no existe o no pertenece a tu cuenta.", None
+
+        if name:
+            playlist.name = name
 
         # 1. Validación de seguridad: Verificar que todos los media_id existen y pertenecen al usuario
         media_ids = [item.media_id for item in items_in]

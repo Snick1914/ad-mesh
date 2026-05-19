@@ -235,7 +235,15 @@ export default function MediaLibrary() {
               {/* Thumbnail Placeholder */}
               <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent"></div>
               {item.type === 'video' ? (
-                <Video className="w-10 h-10 text-gray-500/50" />
+                <>
+                  <Video className="w-10 h-10 text-gray-500/50 absolute" />
+                  <video 
+                    src={item.url} 
+                    className="absolute inset-0 w-full h-full object-cover z-10" 
+                    preload="metadata" 
+                    muted 
+                  />
+                </>
               ) : (
                 <>
                   <ImageIcon className="w-10 h-10 text-gray-500/50 absolute" />

@@ -38,6 +38,7 @@ class PlaylistOut(BaseModel):
         from_attributes = True
 
 class PlaylistUpdateItems(BaseModel):
+    name: Optional[str] = None
     items: List[PlaylistItemCreate]
 
 class PlaylistDeleteResponse(BaseModel):

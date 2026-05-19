@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Plus, GripVertical, Clock, Save, Play, X, Image as ImageIcon, Video, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Plus, GripVertical, Clock, Save, Play, X, Image as ImageIcon, Video, Loader2, AlertCircle, CheckCircle2, Edit2 } from 'lucide-react';
 import type { MediaItem, MediaType, PlaylistItem } from '../../types';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 export default function PlaylistBuilder() {
+  const [activePlaylistId, setActivePlaylistId] = useState<string | null>(null);
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [playlistItems, setPlaylistItems] = useState<PlaylistItem[]>([]);
   const [playlistName, setPlaylistName] = useState('Nueva Playlist Comercial');
@@ -60,6 +61,7 @@ export default function PlaylistBuilder() {
         const playlists = await playlistsResponse.json();
         const activePlaylist = playlists.find((p: any) => p.is_active);
         if (activePlaylist) {
+          setActivePlaylistId(String(activePlaylist.id));
           setPlaylistName(activePlaylist.name);
           const mappedItems: PlaylistItem[] = activePlaylist.items.map((item: any) => ({
             id: String(item.id),
@@ -118,28 +120,34 @@ export default function PlaylistBuilder() {
     setSuccessMessage('');
     try {
       const token = localStorage.getItem('token');
-      
-      // 1. Crear/Publicar la playlist base
-      const createResponse = await fetch(`${API_URL}/playlists/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          name: playlistName,
-          is_active: true
-        })
-      });
+      let targetPlaylistId = activePlaylistId;
 
-      if (!createResponse.ok) {
-        throw new Error('Error al guardar y publicar la lista de reproducción.');
+      // 1. Si no existe una playlist activa cargada, crearla primero
+      if (!targetPlaylistId) {
+        const createResponse = await fetch(`${API_URL}/playlists/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            name: playlistName,
+            is_active: true
+          })
+        });
+
+        if (!createResponse.ok) {
+          throw new Error('Error al crear la lista de reproducción.');
+        }
+
+        const newPlaylist = await createResponse.json();
+        targetPlaylistId = String(newPlaylist.id);
+        setActivePlaylistId(targetPlaylistId);
       }
 
-      const playlist = await createResponse.json();
-
-      // 2. Asociar los elementos de la secuencia de medios
+      // 2. Guardar/actualizar la secuencia de medios y el nombre en la playlist
       const itemsPayload = {
+        name: playlistName,
         items: playlistItems.map((item, index) => ({
           media_id: parseInt(item.mediaItem.id),
           position: index + 1,
@@ -147,7 +155,7 @@ export default function PlaylistBuilder() {
         }))
       };
 
-      const updateResponse = await fetch(`${API_URL}/playlists/${playlist.id}/items`, {
+      const updateResponse = await fetch(`${API_URL}/playlists/${targetPlaylistId}/items`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -157,7 +165,7 @@ export default function PlaylistBuilder() {
       });
 
       if (!updateResponse.ok) {
-        throw new Error('Error al enlazar los recursos de medios en la lista de reproducción.');
+        throw new Error('Error al guardar los recursos de medios en la lista de reproducción.');
       }
 
       setSuccessMessage('¡Lista de reproducción guardada y publicada en la nube! Tu Raspberry Pi se actualizará en unos segundos.');
@@ -187,14 +195,17 @@ export default function PlaylistBuilder() {
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex-1 w-full sm:w-auto">
-          <input 
-            type="text" 
-            value={playlistName}
-            onChange={(e) => setPlaylistName(e.target.value)}
-            className="text-2xl font-bold text-white bg-transparent border-b border-transparent hover:border-white/20 focus:border-[#00F0FF] focus:outline-none px-0 py-1 transition-all w-full max-w-md"
-            placeholder="Nombre de la Playlist"
-          />
-          <p className="text-gray-400 text-sm mt-1 flex items-center gap-2">
+          <div className="flex items-center gap-2 max-w-md group">
+            <input 
+              type="text" 
+              value={playlistName}
+              onChange={(e) => setPlaylistName(e.target.value)}
+              className="text-2xl font-bold text-white bg-transparent border-b border-white/15 hover:border-white/30 focus:border-[#00F0FF] focus:outline-none px-0 py-1 transition-all flex-1"
+              placeholder="Nombre de la Playlist"
+            />
+            <Edit2 className="w-4 h-4 text-gray-500 group-hover:text-white/60 transition-colors shrink-0" />
+          </div>
+          <p className="text-gray-400 text-sm mt-2 flex items-center gap-2">
             <Clock className="w-4 h-4" /> Duración total: <span className="text-white font-mono font-medium bg-white/10 px-2 py-0.5 rounded">{formatTime(totalDuration)}</span>
           </p>
         </div>
@@ -239,7 +250,7 @@ export default function PlaylistBuilder() {
                 >
                   <div className="w-16 h-12 bg-[#0B0F19] rounded flex items-center justify-center shrink-0 border border-white/5 relative overflow-hidden">
                     {media.type === 'video' ? (
-                      <Video className="w-5 h-5 text-gray-400" />
+                      <video src={media.url} className="w-full h-full object-cover" preload="metadata" muted />
                     ) : (
                       <img src={media.url} alt={media.name} className="w-full h-full object-cover" />
                     )}
@@ -286,7 +297,7 @@ export default function PlaylistBuilder() {
 
                   <div className="w-20 h-14 bg-[#0B0F19] rounded border border-white/5 flex items-center justify-center shrink-0 relative overflow-hidden">
                     {item.mediaItem.type === 'video' ? (
-                      <Video className="w-6 h-6 text-gray-600" />
+                      <video src={item.mediaItem.url} className="w-full h-full object-cover" preload="metadata" muted />
                     ) : (
                       <img src={item.mediaItem.url} alt={item.mediaItem.name} className="w-full h-full object-cover" />
                     )}

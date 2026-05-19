@@ -81,3 +81,58 @@ def player_heartbeat(
         storage_used_gb=payload.storage_used_gb,
         status=payload.status
     )
+
+@router.get("/{serial_number}/playlist")
+def get_device_playlist(
+    serial_number: str,
+    db: Session = Depends(deps.get_db)
+):
+    """
+    Obtener la lista de reproducción activa y sus recursos multimedia para la Raspberry Pi.
+    """
+    service = DeviceService(db)
+    device = service.get_by_serial(serial_number)
+    if not device:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Dispositivo no encontrado."
+        )
+    if not device.is_paired or not device.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El dispositivo no está emparejado."
+        )
+
+    # Buscar la lista de reproducción activa del usuario
+    from app.modules.playlists.models import Playlist
+    playlist = db.query(Playlist).filter(
+        Playlist.user_id == device.user_id,
+        Playlist.is_active == True
+    ).first()
+
+    if not playlist:
+        return {
+            "playlist_id": None,
+            "name": "Sin Playlist Activa",
+            "items": []
+        }
+
+    # Serializar los elementos con sus recursos
+    items = []
+    for item in playlist.items:
+        if not item.media.is_deleted:
+            items.append({
+                "id": item.id,
+                "media_id": item.media_id,
+                "name": item.media.name,
+                "file_path": item.media.file_path,
+                "file_type": item.media.file_type,
+                "position": item.position,
+                "duration_seconds": item.duration_seconds
+            })
+
+    return {
+        "playlist_id": playlist.id,
+        "name": playlist.name,
+        "items": items
+    }

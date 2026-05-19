@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ad-mesh - Player</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- CONTENEDOR PRINCIPAL DEL REPRODUCTOR (SEAMLESS DOUBLE-BUFFER) -->
+  <div id="player-container">
+    <div id="layer-a" class="player-layer active"></div>
+    <div id="layer-b" class="player-layer"></div>
+  </div>
+
+  <!-- PANTALLA DE EMPAREJAMIENTO (PAIRING SCREEN) -->
+  <div id="pairing-screen" class="overlay-screen">
+    <div class="glow-bg"></div>
+    <div class="pairing-card">
+      <div class="logo">ad-mesh</div>
+      <h2>VINCULA ESTA PANTALLA</h2>
+      <p>Ingresa este código de activación en la consola web para comenzar a transmitir tu contenido.</p>
+      
+      <div class="code-container">
+        <span id="pairing-code">------</span>
+      </div>
+
+      <div class="serial-info">
+        Número de serie: <span id="serial-number">...</span>
+      </div>
+      
+      <div class="status-indicator">
+        <span class="pulse-dot"></span> Esperando activación...
+      </div>
+    </div>
+  </div>
+
+  <!-- PANTALLA DE STANDBY (PLAYLIST VACÍA) -->
+  <div id="standby-screen" class="overlay-screen">
+    <div class="glow-bg"></div>
+    <div class="standby-content">
+      <div class="logo animate-pulse">ad-mesh</div>
+      <h3>Pantalla Activada Exitosamente</h3>
+      <p>Esperando a que guardes o asignes una lista de reproducción desde el panel de control...</p>
+      <div class="loader"></div>
+    </div>
+  </div>
+
+  <script>
+    // Variables de Estado
+    let isPaired = false;
+    let currentPlaylist = { playlist_id: null, items: [] };
+    let playlistIndex = 0;
+    let activeLayerId = 'layer-a';
+    let transitionTimeout = null;
+
+    // Elementos DOM
+    const pairingScreen = document.getElementById('pairing-screen');
+    const standbyScreen = document.getElementById('standby-screen');
+    const pairingCodeEl = document.getElementById('pairing-code');
+    const serialNumberEl = document.getElementById('serial-number');
+
+    // --- 🔄 OBTENER ESTADO DESDE EL DAEMON LOCAL ---
+    async function checkLocalState() {
+      try {
+        const response = await fetch('/api/local/state');
+        const state = await response.data || await response.json();
+
+        // 1. Manejo del Emparejamiento
+        if (!state.is_paired) {
+          isPaired = false;
+          pairingScreen.classList.add('visible');
+          standbyScreen.classList.remove('visible');
+          pairingCodeEl.textContent = state.pairing_code || '------';
+          serialNumberEl.textContent = state.serial_number || '...';
+          stopPlayback();
+          return;
+        }
+
+        isPaired = true;
+        pairingScreen.classList.remove('visible');
+
+        // 2. Manejo de la Playlist
+        const newPlaylist = state.playlist;
+        if (!newPlaylist.playlist_id || !newPlaylist.items || newPlaylist.items.length === 0) {
+          standbyScreen.classList.add('visible');
+          stopPlayback();
+          return;
+        }
+
+        standbyScreen.classList.remove('visible');
+
+        // Si la playlist cambió (ID diferente o longitud diferente), reiniciar reproducción
+        if (currentPlaylist.playlist_id !== newPlaylist.playlist_id || 
+            currentPlaylist.items.length !== newPlaylist.items.length) {
+          console.log("[PLAYER] Nueva playlist detectada. Iniciando reproducción.");
+          currentPlaylist = newPlaylist;
+          playlistIndex = 0;
+          startPlayback();
+        }
+
+      } catch (err) {
+        console.error("[PLAYER] Error conectando con el Daemon local:", err);
+      }
+    }
+
+    // --- 📺 MOTOR DE REPRODUCCIÓN (CROSS-FADE DOUBLE BUFFER) ---
+    function startPlayback() {
+      if (currentPlaylist.items.length === 0) return;
+      clearTimeout(transitionTimeout);
+      playNext();
+    }
+
+    function stopPlayback() {
+      clearTimeout(transitionTimeout);
+      document.getElementById('layer-a').innerHTML = '';
+      document.getElementById('layer-b').innerHTML = '';
+      currentPlaylist = { playlist_id: null, items: [] };
+    }
+
+    function playNext() {
+      if (currentPlaylist.items.length === 0) return;
+
+      const item = currentPlaylist.items[playlistIndex];
+      const nextIndex = (playlistIndex + 1) % currentPlaylist.items.length;
+      
+      const currentLayer = document.getElementById(activeLayerId);
+      const nextLayerId = activeLayerId === 'layer-a' ? 'layer-b' : 'layer-a';
+      const nextLayer = document.getElementById(nextLayerId);
+
+      console.log(`[PLAYER] Reproduciendo item [${playlistIndex}]: ${item.name} (${item.file_type})`);
+
+      // 1. Preparar el siguiente elemento en la capa oculta
+      nextLayer.innerHTML = '';
+      let mediaElement;
+
+      if (item.file_type.startsWith('video')) {
+        mediaElement = document.createElement('video');
+        mediaElement.src = item.local_path;
+        mediaElement.autoplay = true;
+        mediaElement.muted = true; // Forzar muteo garantiza que Autoplay no sea bloqueado
+        mediaElement.playsInline = true;
+        mediaElement.style.width = '100%';
+        mediaElement.style.height = '100%';
+        mediaElement.style.objectFit = 'cover';
+      } else {
+        mediaElement = document.createElement('img');
+        mediaElement.src = item.local_path;
+        mediaElement.style.width = '100%';
+        mediaElement.style.height = '100%';
+        mediaElement.style.objectFit = 'cover';
+      }
+
+      nextLayer.appendChild(mediaElement);
+
+      // Esperar a que el video o imagen esté cargado antes de hacer la transición
+      const triggerTransition = () => {
+        // Intercambiar clases active para el cross-fade css
+        nextLayer.classList.add('active');
+        currentLayer.classList.remove('active');
+        
+        // Cambiar capa activa
+        activeLayerId = nextLayerId;
+        playlistIndex = nextIndex;
+
+        // Programar el siguiente cambio
+        let duration = item.duration_seconds * 1000;
+        
+        if (item.file_type.startsWith('video')) {
+          // Si es video, preferir esperar a que termine el video real en lugar de duración fija
+          mediaElement.onended = () => {
+            playNext();
+          };
+          // Fallback de seguridad por si el video se traba
+          transitionTimeout = setTimeout(playNext, Math.max(duration, 30000));
+        } else {
+          // Si es imagen, usar la duración configurada
+          transitionTimeout = setTimeout(playNext, duration);
+        }
+      };
+
+      if (item.file_type.startsWith('video')) {
+        mediaElement.oncanplaythrough = triggerTransition;
+      } else {
+        mediaElement.onload = triggerTransition;
+      }
+
+      // Si por alguna razón la precarga falla, disparar de todos modos en 3 segundos
+      setTimeout(() => {
+        if (activeLayerId !== nextLayerId && playlistIndex === nextIndex) {
+          triggerTransition();
+        }
+      }, 3000);
+    }
+
+    // Monitorear estado local cada 5 segundos
+    setInterval(checkLocalState, 5000);
+    // Primera consulta inmediata
+    checkLocalState();
+  </script>
+</body>
+</html>

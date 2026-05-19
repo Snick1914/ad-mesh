@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  player-daemon:
+    build: ./player-daemon
+    container_name: admesh-player-daemon
+    restart: always
+    network_mode: "host"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - PORT=8080
+      - BACKEND_URL=https://api.ad-mesh.com/api/v1 # Reemplazar con la URL del VPS en producción

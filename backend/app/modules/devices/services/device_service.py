@@ -28,6 +28,10 @@ class DeviceService:
         if device and device.is_paired:
             return device
 
+        # Si ya tiene un código generado, reutilizarlo para que no cambie tan rápido en la pantalla
+        if device and device.pairing_code:
+            return device
+
         # Generar un código único de 6 caracteres
         pairing_code = "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
         

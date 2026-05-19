@@ -1,10 +1,12 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Plus, GripVertical, Clock, Save, Play, X, Image as ImageIcon, Loader2, AlertCircle, CheckCircle2, Edit2 } from 'lucide-react';
+import { Plus, GripVertical, Clock, Save, X, Image as ImageIcon, Loader2, AlertCircle, CheckCircle2, Edit2, Trash2, ArrowLeft, PlayCircle } from 'lucide-react';
 import type { MediaItem, MediaType, PlaylistItem } from '../../types';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 export default function PlaylistBuilder() {
+  const [viewMode, setViewMode] = useState<'list' | 'builder'>('list');
+  const [playlistsList, setPlaylistsList] = useState<any[]>([]);
   const [activePlaylistId, setActivePlaylistId] = useState<string | null>(null);
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [playlistItems, setPlaylistItems] = useState<PlaylistItem[]>([]);
@@ -24,7 +26,7 @@ export default function PlaylistBuilder() {
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  // Cargar biblioteca y playlist activa en el inicio
+  // Cargar biblioteca y playlists existentes en el inicio
   const loadData = async () => {
     setIsLoading(true);
     setError('');
@@ -51,15 +53,18 @@ export default function PlaylistBuilder() {
       }));
       setMediaItems(mappedMedia);
 
-      // 2. Obtener playlists existentes para buscar la activa y cargarla
+      // 2. Obtener playlists existentes
       const playlistsResponse = await fetch(`${API_URL}/playlists/`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
       if (playlistsResponse.ok) {
-        const playlists = await playlistsResponse.json();
-        const activePlaylist = playlists.find((p: any) => p.is_active);
+        const playlistsData = await playlistsResponse.json();
+        setPlaylistsList(playlistsData);
+        
+        // Buscar la playlist activa para cargarla por defecto en la edición si es necesario
+        const activePlaylist = playlistsData.find((p: any) => p.is_active);
         if (activePlaylist) {
           setActivePlaylistId(String(activePlaylist.id));
           setPlaylistName(activePlaylist.name);
@@ -89,6 +94,66 @@ export default function PlaylistBuilder() {
   useEffect(() => {
     loadData();
   }, []);
+
+  const handleCreateNewClick = () => {
+    setActivePlaylistId(null);
+    setPlaylistName('Nueva Playlist Comercial');
+    setPlaylistItems([]);
+    setViewMode('builder');
+  };
+
+  const handleEditPlaylist = (p: any) => {
+    setActivePlaylistId(String(p.id));
+    setPlaylistName(p.name);
+    const mappedItems: PlaylistItem[] = p.items.map((item: any) => ({
+      id: String(item.id),
+      mediaItem: {
+        id: String(item.media.id),
+        name: item.media.name,
+        url: item.media.file_path.startsWith('http') ? item.media.file_path : `${API_URL.replace('/api/v1', '')}/${item.media.file_path}`,
+        type: (item.media.file_type.startsWith('video') ? 'video' : 'image') as MediaType,
+        size: Number((item.media.file_size_bytes / (1024 * 1024)).toFixed(2)),
+        duration: item.media.file_type.startsWith('video') ? 15 : undefined,
+      },
+      duration: item.duration_seconds,
+      transition: 'Fade'
+    }));
+    setPlaylistItems(mappedItems);
+    setViewMode('builder');
+  };
+
+  const handleDeletePlaylist = async (id: number) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar esta lista de reproducción de forma permanente?')) {
+      return;
+    }
+    setIsSaving(true);
+    setError('');
+    setSuccessMessage('');
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/playlists/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!response.ok) {
+        throw new Error('Error al eliminar la lista de reproducción.');
+      }
+      
+      setSuccessMessage('Lista de reproducción eliminada con éxito.');
+      if (String(id) === activePlaylistId) {
+        setActivePlaylistId(null);
+        setPlaylistItems([]);
+        setPlaylistName('Nueva Playlist Comercial');
+      }
+      await loadData();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleAddToPlaylist = (media: MediaItem) => {
     const newItem: PlaylistItem = {
@@ -168,6 +233,7 @@ export default function PlaylistBuilder() {
         throw new Error('Error al guardar los recursos de medios en la lista de reproducción.');
       }
 
+      await loadData();
       setSuccessMessage('¡Lista de reproducción guardada y publicada en la nube! Tu Raspberry Pi se actualizará en unos segundos.');
       setTimeout(() => setSuccessMessage(''), 6000);
     } catch (err: any) {
@@ -193,159 +259,258 @@ export default function PlaylistBuilder() {
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex-1 w-full sm:w-auto">
-          <div className="flex items-center gap-2 max-w-md group">
-            <input 
-              type="text" 
-              value={playlistName}
-              onChange={(e) => setPlaylistName(e.target.value)}
-              className="text-2xl font-bold text-white bg-transparent border-b border-white/15 hover:border-white/30 focus:border-[#00F0FF] focus:outline-none px-0 py-1 transition-all flex-1"
-              placeholder="Nombre de la Playlist"
-            />
-            <Edit2 className="w-4 h-4 text-gray-500 group-hover:text-white/60 transition-colors shrink-0" />
-          </div>
-          <p className="text-gray-400 text-sm mt-2 flex items-center gap-2">
-            <Clock className="w-4 h-4" /> Duración total: <span className="text-white font-mono font-medium bg-white/10 px-2 py-0.5 rounded">{formatTime(totalDuration)}</span>
-          </p>
-        </div>
-        <div className="flex gap-3 w-full sm:w-auto">
-          <button className="flex-1 sm:flex-none bg-white/5 hover:bg-white/10 border border-white/10 text-white px-4 py-2.5 rounded-xl font-medium flex items-center justify-center gap-2 transition-all">
-            <Play className="w-4 h-4" /> Previsualizar
-          </button>
-          <button 
-            onClick={handleSavePlaylist}
-            disabled={isSaving}
-            className="flex-1 sm:flex-none bg-[#00F0FF] hover:bg-[#00D1FF] disabled:bg-[#00F0FF]/50 disabled:cursor-not-allowed text-[#0B0F19] px-4 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-[0_0_15px_rgba(0,240,255,0.2)]"
-          >
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Guardar y Publicar
-          </button>
-        </div>
-      </div>
-
-      <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-12rem)] min-h-[600px]">
-        {/* Left Side: Media Library */}
-        <div className="w-full lg:w-1/3 bg-[#161C2D] border border-white/5 rounded-2xl flex flex-col overflow-hidden">
-          <div className="p-4 border-b border-white/5 bg-[#161C2D]/80 backdrop-blur-md flex justify-between items-center">
+      {viewMode === 'list' ? (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
             <div>
-              <h3 className="font-semibold text-white">Librería</h3>
-              <p className="text-xs text-gray-400">Clic para añadir a la línea de tiempo</p>
+              <h2 className="text-3xl font-extrabold text-white tracking-tight">Listas de Reproducción</h2>
+              <p className="text-gray-400 text-sm mt-1">Crea, edita y administra tus secuencias de contenidos comerciales.</p>
             </div>
-            {isLoading && <Loader2 className="w-4 h-4 animate-spin text-[#00F0FF]" />}
+            <button 
+              onClick={handleCreateNewClick}
+              className="bg-[#00F0FF] hover:bg-[#00D1FF] text-[#0B0F19] px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(0,240,255,0.2)] hover:scale-[1.02]"
+            >
+              <Plus className="w-5 h-5" /> Nueva Playlist
+            </button>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {mediaItems.length === 0 && !isLoading ? (
-              <div className="h-full flex flex-col items-center justify-center text-center p-6">
-                <ImageIcon className="w-8 h-8 text-gray-600 mb-2" />
-                <p className="text-sm text-gray-400">Biblioteca vacía</p>
-                <p className="text-xs text-gray-500 mt-1">Sube fotos o videos primero en la pestaña "Biblioteca".</p>
+
+          {playlistsList.length === 0 ? (
+            <div className="bg-[#161C2D] border border-white/5 rounded-2xl p-16 text-center max-w-2xl mx-auto flex flex-col items-center justify-center">
+              <div className="w-20 h-20 rounded-full bg-white/5 border border-white/10 border-dashed flex items-center justify-center mb-6">
+                <PlayCircle className="w-10 h-10 text-[#00F0FF]" />
               </div>
-            ) : (
-              mediaItems.map(media => (
-                <div 
-                  key={media.id} 
-                  onClick={() => handleAddToPlaylist(media)}
-                  className="group flex gap-3 p-2 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10 cursor-pointer transition-all items-center"
-                >
-                  <div className="w-16 h-12 bg-[#0B0F19] rounded flex items-center justify-center shrink-0 border border-white/5 relative overflow-hidden">
-                    {media.type === 'video' ? (
-                      <video src={media.url} className="w-full h-full object-cover" preload="metadata" muted />
-                    ) : (
-                      <img src={media.url} alt={media.name} className="w-full h-full object-cover" />
-                    )}
-                    {media.type === 'video' && <span className="absolute bottom-0 right-0 bg-black/80 text-[9px] px-1 text-white">{media.duration}s</span>}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-medium text-white truncate group-hover:text-[#00F0FF] transition-colors">{media.name}</h4>
-                    <p className="text-xs text-gray-500 uppercase">{media.type}</p>
-                  </div>
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity p-2">
-                    <Plus className="w-5 h-5 text-[#00F0FF]" />
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Right Side: Timeline Builder */}
-        <div className="w-full lg:w-2/3 bg-[#161C2D] border border-white/5 rounded-2xl flex flex-col overflow-hidden">
-          <div className="p-4 border-b border-white/5 bg-[#161C2D]/80 backdrop-blur-md flex justify-between items-center">
-            <h3 className="font-semibold text-white">Línea de Tiempo ({playlistItems.length} elementos)</h3>
-          </div>
-          
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#0B0F19]/50">
-            {playlistItems.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center p-8">
-                <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4 border border-white/10 border-dashed">
-                  <Plus className="w-6 h-6 text-gray-500" />
-                </div>
-                <h3 className="text-lg font-medium text-white mb-1">Playlist Vacía</h3>
-                <p className="text-sm text-gray-400">Selecciona elementos de la librería a la izquierda para empezar a construir tu secuencia.</p>
-              </div>
-            ) : (
-              playlistItems.map((item, index) => (
-                <div key={item.id} className="bg-[#161C2D] border border-white/10 rounded-xl flex items-center p-3 gap-4 group hover:border-white/20 transition-all relative">
-                  <div className="text-gray-500 cursor-grab hover:text-white">
-                    <GripVertical className="w-5 h-5" />
-                  </div>
-                  
-                  <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-xs font-bold text-gray-400 shrink-0">
-                    {index + 1}
-                  </div>
-
-                  <div className="w-20 h-14 bg-[#0B0F19] rounded border border-white/5 flex items-center justify-center shrink-0 relative overflow-hidden">
-                    {item.mediaItem.type === 'video' ? (
-                      <video src={item.mediaItem.url} className="w-full h-full object-cover" preload="metadata" muted />
-                    ) : (
-                      <img src={item.mediaItem.url} alt={item.mediaItem.name} className="w-full h-full object-cover" />
-                    )}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-bold text-white truncate mb-1">{item.mediaItem.name}</h4>
-                    <div className="flex flex-wrap gap-3">
-                      <div className="flex items-center gap-2">
-                        <label className="text-xs text-gray-400">Duración (s):</label>
-                        <input 
-                          type="number" 
-                          min="1"
-                          value={item.duration}
-                          onChange={(e) => updateItem(item.id, { duration: parseInt(e.target.value) || 1 })}
-                          className="w-16 bg-[#0B0F19] border border-white/10 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#00F0FF]"
-                          disabled={item.mediaItem.type === 'video'} // Duración fija para video
-                          title={item.mediaItem.type === 'video' ? "Duración fijada por el video" : ""}
-                        />
+              <h3 className="text-xl font-bold text-white mb-2">No tienes Playlists creadas</h3>
+              <p className="text-gray-400 text-sm mb-8 max-w-md">
+                Crea tu primera lista de reproducción para ordenar tus videos e imágenes y transmitirlos a tus pantallas en tiempo real.
+              </p>
+              <button 
+                onClick={handleCreateNewClick}
+                className="bg-[#00F0FF] hover:bg-[#00D1FF] text-[#0B0F19] px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(0,240,255,0.2)] hover:scale-[1.02]"
+              >
+                <Plus className="w-5 h-5" /> Crear tu primera Playlist
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {playlistsList.map(p => {
+                const playlistDuration = p.items.reduce((acc: number, item: any) => acc + item.duration_seconds, 0);
+                return (
+                  <div 
+                    key={p.id} 
+                    className="bg-[#161C2D] border border-white/5 rounded-2xl overflow-hidden group hover:border-[#00F0FF]/30 transition-all duration-300 flex flex-col justify-between hover:shadow-[0_4px_20px_rgba(0,240,255,0.05)]"
+                  >
+                    <div className="p-6 flex flex-col h-full justify-between">
+                      <div>
+                        <div className="flex justify-between items-start gap-4 mb-4">
+                          <h4 className="text-lg font-bold text-white group-hover:text-[#00F0FF] transition-colors line-clamp-1">{p.name}</h4>
+                          {p.is_active ? (
+                            <span className="bg-[#00F0FF]/10 text-[#00F0FF] text-[10px] font-bold px-2 py-0.5 rounded-full border border-[#00F0FF]/20 uppercase tracking-wider shrink-0">
+                              Activa
+                            </span>
+                          ) : (
+                            <span className="bg-white/5 text-gray-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-white/5 uppercase tracking-wider shrink-0">
+                              Borrador
+                            </span>
+                          )}
+                        </div>
+                        
+                        <div className="space-y-2 mt-4 text-sm text-gray-400">
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-gray-500" />
+                            <span>Duración total: <strong className="text-white font-mono">{formatTime(playlistDuration)}</strong></span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <ImageIcon className="w-4 h-4 text-gray-500" />
+                            <span>Elementos: <strong className="text-white">{p.items.length}</strong></span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <label className="text-xs text-gray-400">Animación:</label>
-                        <select 
-                          value={item.transition}
-                          onChange={(e) => updateItem(item.id, { transition: e.target.value as any })}
-                          className="bg-[#0B0F19] border border-white/10 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#00F0FF]"
+
+                      <div className="mt-8 pt-4 border-t border-white/5 flex gap-3">
+                        <button 
+                          onClick={() => handleEditPlaylist(p)}
+                          className="flex-1 bg-white/5 hover:bg-white/10 text-white py-2.5 rounded-xl font-semibold text-xs border border-white/5 transition-all text-center flex items-center justify-center gap-1.5"
                         >
-                          <option value="None">Sin Transición</option>
-                          <option value="Fade">Fade</option>
-                          <option value="Slide Left">Slide Left</option>
-                          <option value="Zoom">Zoom</option>
-                        </select>
+                          <Edit2 className="w-3.5 h-3.5" /> Editar
+                        </button>
+                        <button 
+                          onClick={() => handleDeletePlaylist(p.id)}
+                          className="bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white p-2.5 rounded-xl transition-all border border-red-500/20"
+                          title="Eliminar Playlist"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
                   </div>
-
-                  <button 
-                    onClick={() => handleRemoveFromPlaylist(item.id)}
-                    className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex-1 w-full sm:w-auto flex items-center gap-3">
+              <button 
+                onClick={() => setViewMode('list')}
+                className="p-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl border border-white/5 transition-all mr-1 shrink-0"
+                title="Volver a la lista"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 max-w-md group">
+                  <input 
+                    type="text" 
+                    value={playlistName}
+                    onChange={(e) => setPlaylistName(e.target.value)}
+                    className="text-2xl font-bold text-white bg-transparent border-b border-white/15 hover:border-white/30 focus:border-[#00F0FF] focus:outline-none px-0 py-1 transition-all flex-1"
+                    placeholder="Nombre de la Playlist"
+                  />
+                  <Edit2 className="w-4 h-4 text-gray-500 group-hover:text-white/60 transition-colors shrink-0" />
                 </div>
-              ))
-            )}
+                <p className="text-gray-400 text-sm mt-2 flex items-center gap-2">
+                  <Clock className="w-4 h-4" /> Duración total: <span className="text-white font-mono font-medium bg-white/10 px-2 py-0.5 rounded">{formatTime(totalDuration)}</span>
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 w-full sm:w-auto">
+              <button 
+                onClick={handleSavePlaylist}
+                disabled={isSaving}
+                className="flex-1 sm:flex-none bg-[#00F0FF] hover:bg-[#00D1FF] disabled:bg-[#00F0FF]/50 disabled:cursor-not-allowed text-[#0B0F19] px-4 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-[0_0_15px_rgba(0,240,255,0.2)]"
+              >
+                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Guardar y Publicar
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-12rem)] min-h-[600px]">
+            {/* Left Side: Media Library */}
+            <div className="w-full lg:w-1/3 bg-[#161C2D] border border-white/5 rounded-2xl flex flex-col overflow-hidden">
+              <div className="p-4 border-b border-white/5 bg-[#161C2D]/80 backdrop-blur-md flex justify-between items-center">
+                <div>
+                  <h3 className="font-semibold text-white">Librería</h3>
+                  <p className="text-xs text-gray-400">Clic para añadir a la línea de tiempo</p>
+                </div>
+                {isLoading && <Loader2 className="w-4 h-4 animate-spin text-[#00F0FF]" />}
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {mediaItems.length === 0 && !isLoading ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-6">
+                    <ImageIcon className="w-8 h-8 text-gray-600 mb-2" />
+                    <p className="text-sm text-gray-400">Biblioteca vacía</p>
+                    <p className="text-xs text-gray-500 mt-1">Sube fotos o videos primero en la pestaña "Biblioteca".</p>
+                  </div>
+                ) : (
+                  mediaItems.map(media => (
+                    <div 
+                      key={media.id} 
+                      onClick={() => handleAddToPlaylist(media)}
+                      className="group flex gap-3 p-2 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10 cursor-pointer transition-all items-center"
+                    >
+                      <div className="w-16 h-12 bg-[#0B0F19] rounded flex items-center justify-center shrink-0 border border-white/5 relative overflow-hidden">
+                        {media.type === 'video' ? (
+                          <video src={media.url} className="w-full h-full object-cover" preload="metadata" muted />
+                        ) : (
+                          <img src={media.url} alt={media.name} className="w-full h-full object-cover" />
+                        )}
+                        {media.type === 'video' && <span className="absolute bottom-0 right-0 bg-black/80 text-[9px] px-1 text-white">{media.duration}s</span>}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-medium text-white truncate group-hover:text-[#00F0FF] transition-colors">{media.name}</h4>
+                        <p className="text-xs text-gray-500 uppercase">{media.type}</p>
+                      </div>
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity p-2">
+                        <Plus className="w-5 h-5 text-[#00F0FF]" />
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Right Side: Timeline Builder */}
+            <div className="w-full lg:w-2/3 bg-[#161C2D] border border-white/5 rounded-2xl flex flex-col overflow-hidden">
+              <div className="p-4 border-b border-white/5 bg-[#161C2D]/80 backdrop-blur-md flex justify-between items-center">
+                <h3 className="font-semibold text-white">Línea de Tiempo ({playlistItems.length} elementos)</h3>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#0B0F19]/50">
+                {playlistItems.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-8">
+                    <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4 border border-white/10 border-dashed">
+                      <Plus className="w-6 h-6 text-gray-500" />
+                    </div>
+                    <h3 className="text-lg font-medium text-white mb-1">Playlist Vacía</h3>
+                    <p className="text-sm text-gray-400">Selecciona elementos de la librería a la izquierda para empezar a construir tu secuencia.</p>
+                  </div>
+                ) : (
+                  playlistItems.map((item, index) => (
+                    <div key={item.id} className="bg-[#161C2D] border border-white/10 rounded-xl flex items-center p-3 gap-4 group hover:border-white/20 transition-all relative">
+                      <div className="text-gray-500 cursor-grab hover:text-white">
+                        <GripVertical className="w-5 h-5" />
+                      </div>
+                      
+                      <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-xs font-bold text-gray-400 shrink-0">
+                        {index + 1}
+                      </div>
+
+                      <div className="w-20 h-14 bg-[#0B0F19] rounded border border-white/5 flex items-center justify-center shrink-0 relative overflow-hidden">
+                        {item.mediaItem.type === 'video' ? (
+                          <video src={item.mediaItem.url} className="w-full h-full object-cover" preload="metadata" muted />
+                        ) : (
+                          <img src={item.mediaItem.url} alt={item.mediaItem.name} className="w-full h-full object-cover" />
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-bold text-white truncate mb-1">{item.mediaItem.name}</h4>
+                        <div className="flex flex-wrap gap-3">
+                          <div className="flex items-center gap-2">
+                            <label className="text-xs text-gray-400">Duración (s):</label>
+                            <input 
+                              type="number" 
+                              min="1"
+                              value={item.duration}
+                              onChange={(e) => updateItem(item.id, { duration: parseInt(e.target.value) || 1 })}
+                              className="w-16 bg-[#0B0F19] border border-white/10 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#00F0FF]"
+                              disabled={item.mediaItem.type === 'video'} // Duración fija para video
+                              title={item.mediaItem.type === 'video' ? "Duración fijada por el video" : ""}
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <label className="text-xs text-gray-400">Animación:</label>
+                            <select 
+                              value={item.transition}
+                              onChange={(e) => updateItem(item.id, { transition: e.target.value as any })}
+                              className="bg-[#0B0F19] border border-white/10 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#00F0FF]"
+                            >
+                              <option value="None">Sin Transición</option>
+                              <option value="Fade">Fade</option>
+                              <option value="Slide Left">Slide Left</option>
+                              <option value="Zoom">Zoom</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+
+                      <button 
+                        onClick={() => handleRemoveFromPlaylist(item.id)}
+                        className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

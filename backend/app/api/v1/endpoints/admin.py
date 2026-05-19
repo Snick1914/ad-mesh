@@ -24,7 +24,14 @@ def read_system_summary(
     
     # Calculate allowed limits dynamically from user quotas
     from sqlalchemy import func
+    from app.modules.devices.models import Device
+    
     total_allowed_devices = db.query(func.sum(User.max_devices)).filter(User.is_active == True).scalar() or 0
+    
+    # Real database device counts
+    real_devices_count = db.query(Device).filter(Device.is_paired == True).count()
+    online_devices_count = db.query(Device).filter(Device.is_paired == True, Device.status.in_(["online", "syncing"])).count()
+    offline_devices_count = real_devices_count - online_devices_count
     
     # Real VPS disk metrics
     import shutil
@@ -75,9 +82,9 @@ def read_system_summary(
             "suspended": suspended_users
         },
         "devices": {
-            "total": total_allowed_devices,
-            "online": 0,
-            "offline": 0
+            "total": real_devices_count, # Mostrar el total de pantallas reales emparejadas
+            "online": online_devices_count,
+            "offline": offline_devices_count
         },
         "storage": {
             "total_gb": real_total_gb,

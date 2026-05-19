@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Plus, GripVertical, Clock, Save, Play, X, Image as ImageIcon, Video, Loader2, AlertCircle, CheckCircle2, Edit2 } from 'lucide-react';
+import { Plus, GripVertical, Clock, Save, Play, X, Image as ImageIcon, Loader2, AlertCircle, CheckCircle2, Edit2 } from 'lucide-react';
 import type { MediaItem, MediaType, PlaylistItem } from '../../types';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api/v1';

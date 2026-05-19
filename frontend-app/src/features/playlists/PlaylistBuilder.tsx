@@ -238,7 +238,11 @@ export default function PlaylistBuilder() {
                   className="group flex gap-3 p-2 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10 cursor-pointer transition-all items-center"
                 >
                   <div className="w-16 h-12 bg-[#0B0F19] rounded flex items-center justify-center shrink-0 border border-white/5 relative overflow-hidden">
-                    {media.type === 'video' ? <Video className="w-5 h-5 text-gray-400" /> : <ImageIcon className="w-5 h-5 text-gray-400" />}
+                    {media.type === 'video' ? (
+                      <Video className="w-5 h-5 text-gray-400" />
+                    ) : (
+                      <img src={media.url} alt={media.name} className="w-full h-full object-cover" />
+                    )}
                     {media.type === 'video' && <span className="absolute bottom-0 right-0 bg-black/80 text-[9px] px-1 text-white">{media.duration}s</span>}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -280,8 +284,12 @@ export default function PlaylistBuilder() {
                     {index + 1}
                   </div>
 
-                  <div className="w-20 h-14 bg-[#0B0F19] rounded border border-white/5 flex items-center justify-center shrink-0">
-                    {item.mediaItem.type === 'video' ? <Video className="w-6 h-6 text-gray-600" /> : <ImageIcon className="w-6 h-6 text-gray-600" />}
+                  <div className="w-20 h-14 bg-[#0B0F19] rounded border border-white/5 flex items-center justify-center shrink-0 relative overflow-hidden">
+                    {item.mediaItem.type === 'video' ? (
+                      <Video className="w-6 h-6 text-gray-600" />
+                    ) : (
+                      <img src={item.mediaItem.url} alt={item.mediaItem.name} className="w-full h-full object-cover" />
+                    )}
                   </div>
 
                   <div className="flex-1 min-w-0">

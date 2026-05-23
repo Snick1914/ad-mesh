@@ -163,6 +163,12 @@ const syncLoop = async () => {
         fs.writeFileSync(CONFIG_FILE, JSON.stringify(deviceState, null, 2));
       } catch (e) {
         console.error(`[PAIRED] Error solicitando código al backend:`, e.message);
+        if (deviceState.pairing_code !== "") {
+          deviceState.pairing_code = "";
+          try {
+            fs.writeFileSync(CONFIG_FILE, JSON.stringify(deviceState, null, 2));
+          } catch (writeErr) {}
+        }
       }
       isSyncing = false;
       return;

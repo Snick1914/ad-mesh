@@ -40,6 +40,28 @@
     </div>
   </div>
 
+  <!-- PANTALLA DE CONFIGURACIÓN WI-FI (OFFLINE) -->
+  <div id="offline-screen" class="overlay-screen">
+    <div class="glow-bg"></div>
+    <div class="pairing-card offline-card">
+      <div class="logo">ad-mesh</div>
+      <div class="wifi-icon">📡</div>
+      <h2>PANTALLA SIN INTERNET</h2>
+      <p>Para activar esta pantalla, conéctate a la red Wi-Fi desde tu celular o tableta:</p>
+      
+      <div class="wifi-setup-box">
+        <span class="wifi-label">Red Wi-Fi:</span>
+        <span class="wifi-ssid">ad-mesh-Setup</span>
+      </div>
+
+      <p class="sub-text">El portal de configuración se abrirá automáticamente para que ingreses la clave de tu local.</p>
+      
+      <div class="status-indicator">
+        <span class="pulse-dot offline-dot"></span> Esperando conexión Wi-Fi...
+      </div>
+    </div>
+  </div>
+
   <!-- PANTALLA DE STANDBY (PLAYLIST VACÍA) -->
   <div id="standby-screen" class="overlay-screen">
     <div class="glow-bg"></div>
@@ -52,6 +74,22 @@
   </div>
 
   <script>
+    // --- 🌍 DETECCIÓN DE ENTORNO (PC vs SMART TV) ---
+    const IS_LOCAL_MODE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '';
+    const CLOUD_BACKEND_URL = 'https://ad-mesh.com/api/v1'; // TODO: Configura tu dominio real
+    
+    function getSerialNumber() {
+      if (IS_LOCAL_MODE) return null;
+      let tvSerial = localStorage.getItem('admesh_tv_serial');
+      if (!tvSerial) {
+        tvSerial = `SMSG-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+        localStorage.setItem('admesh_tv_serial', tvSerial);
+      }
+      return tvSerial;
+    }
+    
+    const DEVICE_SERIAL = getSerialNumber();
+
     // Variables de Estado
     let isPaired = false;
     let currentLayout = null;
@@ -132,7 +170,7 @@
         this.activeLayer = 'a';
       }
 
-      playNext() {
+      async playNext() {
         const items = this.playlist.items || [];
         if (items.length === 0) return;
 
@@ -146,6 +184,21 @@
 
         let el;
         let loaded = false;
+
+        // Obtener URL inteligente (Local o Cloud Cache)
+        let mediaUrl = item.local_path;
+        if (!IS_LOCAL_MODE && item.file_path) {
+           const backendBaseUrl = CLOUD_BACKEND_URL.replace('/api/v1', '');
+           mediaUrl = `${backendBaseUrl}/${item.file_path}`;
+           try {
+             const cache = await caches.open('admesh-media-cache');
+             const cachedRes = await cache.match(mediaUrl);
+             if (!cachedRes) {
+               console.log(`[TV-CACHE] Descargando recurso a la TV: ${mediaUrl}`);
+               await cache.add(mediaUrl);
+             }
+           } catch(e) { console.error("Error en cache de TV:", e); }
+        }
 
         const triggerTransition = () => {
           if (loaded) return;
@@ -194,7 +247,7 @@
           el.style.objectFit = 'cover';
           
           el.oncanplaythrough = triggerTransition;
-          el.src = item.local_path; // Set src AFTER event listener definition
+          el.src = mediaUrl; // Set src AFTER event listener definition
         } else {
           el = document.createElement('img');
           el.style.width = '100%';
@@ -202,7 +255,7 @@
           el.style.objectFit = 'cover';
           
           el.onload = triggerTransition;
-          el.src = item.local_path; // Set src AFTER event listener definition
+          el.src = mediaUrl; // Set src AFTER event listener definition
         }
 
         nextLayerEl.appendChild(el);
@@ -303,28 +356,80 @@
       currentLayout = null;
     }
 
-    // --- 🔄 OBTENER ESTADO DESDE EL DAEMON LOCAL ---
-    async function checkLocalState() {
+    // --- 🔄 OBTENER ESTADO (INTELIGENTE: LOCAL O CLOUD) ---
+    async function checkState() {
       try {
-        const response = await fetch('/api/local/state');
-        const state = await response.json();
+        let state = { is_paired: false, pairing_code: "", serial_number: "" };
+        let config = { layout: 'single', zone_a: {items:[]}, zone_b: {items:[]}, zone_c: {items:[]} };
 
-        // 1. Manejo del Emparejamiento
+        if (IS_LOCAL_MODE) {
+          // MODO PC: Hablar con el Daemon local
+          const response = await fetch('/api/local/state');
+          state = await response.json();
+          config = state.playlist || config;
+        } else {
+          // MODO SMART TV: Hablar directo con el Backend en la nube
+          state.serial_number = DEVICE_SERIAL;
+          
+          try {
+            // Intentamos enviar heartbeat
+            const hbRes = await fetch(`${CLOUD_BACKEND_URL}/devices/${DEVICE_SERIAL}/heartbeat`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ip_address: "smart-tv", storage_used_gb: 0, status: "online" })
+            });
+            if (hbRes.ok) state.is_paired = true;
+            else throw new Error("Not paired");
+          } catch (e) {
+            // Si falla, pedimos código de emparejamiento
+            try {
+              const pairRes = await fetch(`${CLOUD_BACKEND_URL}/devices/request-pairing`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ serial_number: DEVICE_SERIAL })
+              });
+              const pairData = await pairRes.json();
+              state.is_paired = pairData.is_paired;
+              state.pairing_code = pairData.pairing_code;
+            } catch(err) { console.error("Error solicitando pairing:", err); }
+          }
+
+          if (state.is_paired) {
+             try {
+               const playlistRes = await fetch(`${CLOUD_BACKEND_URL}/devices/${DEVICE_SERIAL}/playlist`);
+               if (playlistRes.ok) config = await playlistRes.json();
+             } catch(err) { console.error("Error obteniendo playlist:", err); }
+          }
+        }
+
+        // 1. Manejo del Emparejamiento y Modo Offline
         if (!state.is_paired) {
           isPaired = false;
-          pairingScreen.classList.add('visible');
-          standbyScreen.classList.remove('visible');
-          pairingCodeEl.textContent = state.pairing_code || '------';
-          serialNumberEl.textContent = state.serial_number || '...';
           stopAllPlayback();
+          
+          const hasCode = state.pairing_code && state.pairing_code !== '------' && state.pairing_code !== '';
+          if (!hasCode) {
+            // MOSTRAR PANTALLA OFFLINE (SIN INTERNET)
+            document.getElementById('offline-screen').classList.add('visible');
+            pairingScreen.classList.remove('visible');
+            standbyScreen.classList.remove('visible');
+          } else {
+            // MOSTRAR PANTALLA DE EMPAREJAMIENTO (CON INTERNET)
+            document.getElementById('offline-screen').classList.remove('visible');
+            pairingScreen.classList.add('visible');
+            standbyScreen.classList.remove('visible');
+            pairingCodeEl.textContent = state.pairing_code;
+            serialNumberEl.textContent = state.serial_number || '...';
+          }
           return;
         }
 
-        isPaired = true;
+        // Si ya está emparejado, ocultar todo lo que no sea el reproductor
+        document.getElementById('offline-screen').classList.remove('visible');
         pairingScreen.classList.remove('visible');
+        isPaired = true;
 
         // 2. Manejo de la Configuración Multi-Zona
-        const config = state.playlist;
         const layoutType = config.layout || 'single';
 
         const hasItems = (config.zone_a?.items?.length > 0) || 
@@ -350,10 +455,10 @@
       }
     }
 
-    // Monitorear estado local cada 5 segundos
-    setInterval(checkLocalState, 5000);
+    // Monitorear estado cada 5 segundos
+    setInterval(checkState, 5000);
     // Primera consulta inmediata
-    checkLocalState();
+    checkState();
   </script>
 </body>
 </html>

@@ -25,6 +25,7 @@ services:
       - proxy-network
     volumes:
       - ./media:/app/static/media
+      - ./config.py:/app/app/core/config.py
 
   db:
     image: postgres:16-alpine

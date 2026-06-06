@@ -78,8 +78,42 @@
   </div>
 
   <script>
-    // --- 🌍 DETECCIÓN DE ENTORNO (PC vs SMART TV vs ANDROID APK) ---
-    const IS_CAPACITOR = typeof window !== 'undefined' && window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform();
+    const CURRENT_VERSION = 1;
+
+    // --- 🚀 LIGHTWEIGHT OTA BOOTSTRAPPER ---
+    let otaLoading = false;
+    try {
+      const otaVersionStr = localStorage.getItem('admesh_ota_version');
+      const otaVersion = otaVersionStr ? parseInt(otaVersionStr) : 0;
+      if (!window.__admesh_ota_active && otaVersion > CURRENT_VERSION && window.Capacitor) {
+        otaLoading = true;
+        console.log(`[OTA] Cargando actualización de versión ${otaVersion}...`);
+        window.__admesh_ota_active = true;
+        
+        window.Capacitor.Plugins.Filesystem.readFile({
+          path: 'admesh/ota/index.html',
+          directory: 'DATA',
+          encoding: 'utf8'
+        }).then((res) => {
+          if (res.data) {
+            document.open();
+            document.write(res.data);
+            document.close();
+          }
+        }).catch((err) => {
+          console.error("[OTA] Error al cargar la OTA, restableciendo:", err);
+          localStorage.removeItem('admesh_ota_version');
+          window.__admesh_ota_active = false;
+          location.reload();
+        });
+      }
+    } catch (e) {
+      console.error("[OTA] Error en cargador inicial:", e);
+    }
+
+    if (!otaLoading) {
+      // --- 🌍 DETECCIÓN DE ENTORNO (PC vs SMART TV vs ANDROID APK) ---
+      const IS_CAPACITOR = typeof window !== 'undefined' && window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform();
     const IS_LOCAL_MODE = !IS_CAPACITOR && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '');
     
     let rawBackendUrl = localStorage.getItem('admesh_backend_url') || 'https://api.ad-mesh.com/api/v1';
@@ -586,6 +620,39 @@
           cleanOrphanedFilesCapacitor(allowedFiles);
         }
 
+        // 3. Verificar actualizaciones OTA
+        if (IS_CAPACITOR) {
+          try {
+            const manifestRes = await fetch('https://api.ad-mesh.com/static/player/manifest.json', { cache: "no-store" });
+            if (manifestRes.ok) {
+              const manifest = await manifestRes.json();
+              const currentOtaVersionStr = localStorage.getItem('admesh_ota_version');
+              const currentOtaVersion = currentOtaVersionStr ? parseInt(currentOtaVersionStr) : CURRENT_VERSION;
+              
+              if (manifest.version > currentOtaVersion && manifest.url) {
+                console.log(`[OTA] Nueva actualización detectada: versión ${manifest.version}. Descargando...`);
+                const fileRes = await fetch(manifest.url, { cache: "no-store" });
+                if (fileRes.ok) {
+                  const htmlContent = await fileRes.text();
+                  const { Filesystem } = window.Capacitor.Plugins;
+                  await Filesystem.writeFile({
+                    path: 'admesh/ota/index.html',
+                    data: htmlContent,
+                    directory: 'DATA',
+                    recursive: true,
+                    encoding: 'utf8'
+                  });
+                  localStorage.setItem('admesh_ota_version', manifest.version);
+                  console.log(`[OTA] Versión ${manifest.version} descargada con éxito. Reiniciando...`);
+                  location.reload();
+                }
+              }
+            }
+          } catch (e) {
+            console.error("[OTA] Error en búsqueda de actualizaciones:", e);
+          }
+        }
+
       } catch (err) {
         console.error("[PLAYER] Error conectando con el Daemon local:", err);
       }
@@ -598,6 +665,7 @@
       // Primera consulta inmediata
       checkState();
     });
+    } // Cierre de if (!otaLoading)
   </script>
 </body>
 </html>

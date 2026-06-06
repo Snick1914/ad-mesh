@@ -61,6 +61,8 @@
       <div class="status-indicator">
         <span class="pulse-dot offline-dot"></span> Esperando conexión Wi-Fi...
       </div>
+      <div id="error-msg" style="color: #ff5555; font-size: 14px; margin-top: 15px; font-family: monospace;"></div>
+      <button onclick="promptForUrl()" style="margin-top: 20px; background: rgba(255,255,255,0.1); border: 1px solid #444; color: #aaa; padding: 8px 15px; border-radius: 5px; cursor: pointer;">Configurar Servidor</button>
     </div>
   </div>
 
@@ -79,7 +81,16 @@
     // --- 🌍 DETECCIÓN DE ENTORNO (PC vs SMART TV vs ANDROID APK) ---
     const IS_CAPACITOR = typeof window !== 'undefined' && window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform();
     const IS_LOCAL_MODE = !IS_CAPACITOR && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '');
-    const CLOUD_BACKEND_URL = 'https://api.ad-mesh.com/api/v1';
+    let CLOUD_BACKEND_URL = localStorage.getItem('admesh_backend_url') || 'https://api.ad-mesh.com/api/v1';
+
+    function promptForUrl() {
+      const newUrl = prompt("Ingresa la URL de tu Backend (ej: http://192.168.1.50:8000/api/v1):", CLOUD_BACKEND_URL);
+      if (newUrl) {
+        localStorage.setItem('admesh_backend_url', newUrl);
+        location.reload();
+      }
+    }
+
     
     let DEVICE_SERIAL = null;
 
@@ -482,7 +493,10 @@
               const pairData = await pairRes.json();
               state.is_paired = pairData.is_paired;
               state.pairing_code = pairData.pairing_code;
-            } catch(err) { console.error("Error solicitando pairing:", err); }
+            } catch(err) {
+              console.error("Error solicitando pairing:", err);
+              document.getElementById('error-msg').textContent = `Error: ${err.message}. Revisa la URL del servidor.`;
+            }
           }
 
           if (state.is_paired) {

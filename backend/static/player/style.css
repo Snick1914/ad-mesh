@@ -1,0 +1,362 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body, html {
+  width: 100%;
+  height: 100%;
+  background-color: #050811;
+  font-family: 'Outfit', sans-serif;
+  overflow: hidden;
+  color: #ffffff;
+}
+
+/* --- 📺 DOUBLE-BUFFER LAYERING (SEAMLESS TRANSITIONS) --- */
+#player-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-color: #000000;
+}
+
+.player-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 1s ease-in-out; /* GPU-accelerated cross-fade transition */
+  z-index: 1;
+  background-color: #000000;
+}
+
+.player-layer.active {
+  opacity: 1;
+  z-index: 2;
+}
+
+/* --- 🌫️ OVERLAY SCREENS (PAIRING / STANDBY) --- */
+.overlay-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.8s ease-in-out;
+  background-color: #060913;
+}
+
+.overlay-screen.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Glowing Neon Background */
+.glow-bg {
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(0, 240, 255, 0.15) 0%, rgba(121, 40, 202, 0.05) 50%, rgba(0, 0, 0, 0) 100%);
+  filter: blur(80px);
+  animation: glow-float 8s infinite alternate;
+}
+
+@keyframes glow-float {
+  0% { transform: translate(-50px, -50px) scale(1); }
+  100% { transform: translate(50px, 50px) scale(1.2); }
+}
+
+/* --- 🎫 PAIRING CARD (GLASSMORPHISM) --- */
+.pairing-card {
+  position: relative;
+  background: rgba(15, 22, 42, 0.65);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  padding: 48px;
+  width: 90%;
+  max-width: 550px;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 240, 255, 0.05);
+}
+
+.logo {
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -1px;
+  background: linear-gradient(135deg, #00F0FF 0%, #7928CA 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 24px;
+}
+
+h2 {
+  font-size: 1.8rem;
+  font-weight: 800;
+  margin-bottom: 12px;
+  letter-spacing: 0.5px;
+}
+
+p {
+  color: #94A3B8;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  margin-bottom: 32px;
+}
+
+/* Activation Code display */
+.code-container {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1.5px dashed rgba(0, 240, 255, 0.4);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 32px;
+  box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+  transition: all 0.3s;
+}
+
+#pairing-code {
+  font-family: monospace;
+  font-size: 3.5rem;
+  font-weight: 800;
+  letter-spacing: 6px;
+  color: #00F0FF;
+  text-shadow: 0 0 15px rgba(0, 240, 255, 0.6);
+}
+
+.serial-info {
+  font-size: 0.9rem;
+  color: #64748B;
+  margin-bottom: 24px;
+}
+
+#serial-number {
+  color: #E2E8F0;
+  font-weight: 600;
+}
+
+/* Pulsing Online Indicator */
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 8px 16px;
+  border-radius: 50px;
+  font-size: 0.9rem;
+  color: #CBD5E1;
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #00F0FF;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #00F0FF;
+  animation: pulse-dot-anim 1.5s infinite;
+}
+
+@keyframes pulse-dot-anim {
+  0% { transform: scale(0.9); opacity: 0.4; }
+  50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 12px #00F0FF; }
+  100% { transform: scale(0.9); opacity: 0.4; }
+}
+
+/* --- ⏳ STANDBY SCREEN --- */
+.standby-content {
+  text-align: center;
+  z-index: 2;
+  max-width: 600px;
+  padding: 40px;
+}
+
+.standby-content h3 {
+  font-size: 2rem;
+  font-weight: 800;
+  margin-bottom: 12px;
+}
+
+.standby-content p {
+  margin-bottom: 36px;
+}
+
+.animate-pulse {
+  animation: logo-pulse 2s infinite alternate;
+}
+
+@keyframes logo-pulse {
+  0% { transform: scale(0.98); filter: drop-shadow(0 0 5px rgba(0, 240, 255, 0.3)); }
+  100% { transform: scale(1.02); filter: drop-shadow(0 0 20px rgba(0, 240, 255, 0.7)); }
+}
+
+/* Modern Standby Loader */
+.loader {
+  width: 48px;
+  height: 48px;
+  border: 3px solid rgba(0, 240, 255, 0.1);
+  border-radius: 50%;
+  border-top-color: #00F0FF;
+  display: inline-block;
+  animation: spin 1s linear infinite;
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.1);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* --- 📐 DISTRIBUCIONES DE PANTALLA MULTI-ZONA REALES (GPU ACELERADO) --- */
+#player-container.single {
+  display: block;
+}
+
+#player-container.split-h {
+  display: flex;
+  flex-direction: column;
+}
+#player-container.split-h .zone-container {
+  width: 100%;
+  height: 50%;
+  position: relative;
+  overflow: hidden;
+}
+#player-container.split-h #zone-a {
+  border-bottom: 2px solid rgba(0, 240, 255, 0.4);
+}
+
+#player-container.split-v {
+  display: flex;
+  flex-direction: row;
+}
+#player-container.split-v .zone-container {
+  width: 50%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+#player-container.split-v #zone-a {
+  border-right: 2px solid rgba(0, 240, 255, 0.4);
+}
+
+#player-container.l-shape {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: #000;
+}
+#player-container.l-shape .top-row {
+  display: flex;
+  flex-direction: row;
+  height: 85%; /* 85% para Zona Principal y Lateral */
+  width: 100%;
+}
+#player-container.l-shape #zone-a {
+  width: 70%; /* 70% ancho Zona Principal */
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  border-right: 2px solid rgba(0, 240, 255, 0.4);
+  border-bottom: 2px solid rgba(0, 240, 255, 0.4);
+}
+#player-container.l-shape #zone-b {
+  width: 30%; /* 30% ancho Zona Lateral */
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  border-bottom: 2px solid rgba(0, 240, 255, 0.4);
+}
+#player-container.l-shape #zone-c {
+  width: 100%;
+  height: 15%; /* 15% Cintillo Inferior */
+  position: relative;
+  overflow: hidden;
+}
+
+/* --- 🧬 CAPAS DENTRO DE CADA ZONA (CROSS-FADE ULTRARRÁPIDO) --- */
+.zone-container {
+  background-color: #000000;
+  position: relative;
+}
+
+.zone-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  z-index: 1;
+  background-color: #000000;
+  transition: opacity 0.25s ease-in-out; /* 250ms snap-fade, previene flickering y optimiza GPU del Pi */
+  will-change: opacity;
+}
+
+.zone-layer.active {
+  opacity: 1;
+  z-index: 2;
+}
+
+/* --- 📡 PANTALLA OFFLINE & DETECTOR WI-FI SETUP --- */
+.offline-card {
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 40px rgba(239, 68, 68, 0.05);
+}
+
+.wifi-icon {
+  font-size: 3.5rem;
+  margin-bottom: 20px;
+  animation: wifi-pulse 2s infinite alternate;
+}
+
+@keyframes wifi-pulse {
+  0% { transform: scale(1); filter: drop-shadow(0 0 5px rgba(0, 240, 255, 0.2)); }
+  100% { transform: scale(1.1); filter: drop-shadow(0 0 20px rgba(0, 240, 255, 0.7)); }
+}
+
+.wifi-setup-box {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1.5px solid rgba(0, 240, 255, 0.3);
+  border-radius: 16px;
+  padding: 18px 24px;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+
+.wifi-label {
+  color: #64748B;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.wifi-ssid {
+  color: #00F0FF;
+  font-weight: 800;
+  font-size: 1.6rem;
+  letter-spacing: 1px;
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+}
+
+.pulse-dot.offline-dot {
+  background-color: #EF4444;
+  box-shadow: 0 0 8px #EF4444;
+}
+
+.sub-text {
+  font-size: 0.95rem;
+  color: #64748B;
+  margin-bottom: 28px;
+}

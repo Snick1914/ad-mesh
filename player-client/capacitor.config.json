@@ -3,6 +3,7 @@
   "appName": "ad-mesh Player",
   "webDir": "player-daemon/public",
   "server": {
-    "androidScheme": "https"
+    "androidScheme": "https",
+    "url": "https://api.ad-mesh.com/static/player/index.html"
   }
 }

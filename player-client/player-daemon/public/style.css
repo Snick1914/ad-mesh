@@ -97,7 +97,7 @@ body, html {
   align-items: center;
 }
 
-.logo svg {
+.logo svg, .logo img {
   height: 45px;
   width: auto;
   display: block;

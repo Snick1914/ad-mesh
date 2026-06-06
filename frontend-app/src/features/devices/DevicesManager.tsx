@@ -128,6 +128,18 @@ export default function DevicesManager() {
   useEffect(() => {
     fetchDevices();
     fetchPlaylists();
+
+    // Comprobar si hay un código de vinculación en la URL (?code=XXXXXX)
+    const params = new URLSearchParams(window.location.search);
+    const codeParam = params.get('code');
+    if (codeParam && codeParam.length === 6) {
+      setActivationCode(codeParam.toUpperCase());
+      setIsModalOpen(true);
+      
+      // Limpiar el parámetro de la URL para evitar molestias al recargar
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
   }, []);
 
   // Al abrir el drawer de configuración de un dispositivo

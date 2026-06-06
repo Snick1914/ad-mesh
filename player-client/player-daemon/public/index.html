@@ -23,21 +23,31 @@
   <!-- PANTALLA DE EMPAREJAMIENTO (PAIRING SCREEN) -->
   <div id="pairing-screen" class="overlay-screen">
     <div class="glow-bg"></div>
-    <div class="pairing-card">
-      <div class="logo"><img src="logo.svg" alt="ad-mesh"></div>
-      <h2>VINCULA ESTA PANTALLA</h2>
-      <p>Ingresa este código de activación en la consola web para comenzar a transmitir tu contenido.</p>
-      
-      <div class="code-container">
-        <span id="pairing-code">------</span>
-      </div>
+    <div class="pairing-card pairing-card-wide">
+      <div class="pairing-split">
+        <div class="pairing-info-col">
+          <div class="logo"><img src="logo.svg" alt="ad-mesh"></div>
+          <h2>VINCULA ESTA PANTALLA</h2>
+          <p>Ingresa este código de activación en la consola web para comenzar a transmitir tu contenido.</p>
+          
+          <div class="code-container">
+            <span id="pairing-code">------</span>
+          </div>
 
-      <div class="serial-info">
-        Número de serie: <span id="serial-number">...</span>
-      </div>
-      
-      <div class="status-indicator">
-        <span class="pulse-dot"></span> Esperando activación...
+          <div class="serial-info">
+            Número de serie: <span id="serial-number">...</span>
+          </div>
+          
+          <div class="status-indicator">
+            <span class="pulse-dot"></span> Esperando activación...
+          </div>
+        </div>
+        
+        <div class="pairing-qr-col">
+          <img id="pairing-qr" src="" alt="Código QR de Emparejamiento" class="qr-code-img" />
+          <div class="qr-label">Vinculación Rápida</div>
+          <div class="qr-sublabel">Escanea con la cámara de tu celular</div>
+        </div>
       </div>
     </div>
   </div>
@@ -585,6 +595,15 @@
             standbyScreen.classList.remove('visible');
             pairingCodeEl.textContent = state.pairing_code;
             serialNumberEl.textContent = state.serial_number || '...';
+            
+            // Generar y cargar código QR para emparejamiento automático en la app
+            const qrTargetUrl = `https://app.ad-mesh.com/devices?code=${state.pairing_code}`;
+            const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&color=00f0ff&bgcolor=15162c&data=${encodeURIComponent(qrTargetUrl)}`;
+            const qrImg = document.getElementById('pairing-qr');
+            if (qrImg && qrImg.getAttribute('data-code') !== state.pairing_code) {
+              qrImg.src = qrApiUrl;
+              qrImg.setAttribute('data-code', state.pairing_code);
+            }
           }
           return;
         }

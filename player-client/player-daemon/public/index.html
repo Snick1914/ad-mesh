@@ -79,7 +79,7 @@
     // --- 🌍 DETECCIÓN DE ENTORNO (PC vs SMART TV vs ANDROID APK) ---
     const IS_CAPACITOR = typeof window !== 'undefined' && window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform();
     const IS_LOCAL_MODE = !IS_CAPACITOR && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '');
-    const CLOUD_BACKEND_URL = 'https://ad-mesh.com/api/v1'; // TODO: Configura tu dominio real
+    const CLOUD_BACKEND_URL = 'https://api.ad-mesh.com/api/v1';
     
     let DEVICE_SERIAL = null;
 

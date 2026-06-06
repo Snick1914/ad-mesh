@@ -487,8 +487,15 @@
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ ip_address: "smart-tv", storage_used_gb: 0, status: "online" })
             });
-            if (hbRes.ok) state.is_paired = true;
-            else throw new Error("Not paired");
+            if (hbRes.ok) {
+              const hbData = await hbRes.json();
+              state.is_paired = hbData.is_paired;
+              if (!state.is_paired) {
+                throw new Error("Device not paired yet");
+              }
+            } else {
+              throw new Error("Heartbeat failed");
+            }
           } catch (e) {
             // Si falla, pedimos código de emparejamiento
             try {

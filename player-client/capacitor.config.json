@@ -1,0 +1,8 @@
+{
+  "appId": "com.admesh.player",
+  "appName": "ad-mesh Player",
+  "webDir": "player-daemon/public",
+  "server": {
+    "androidScheme": "https"
+  }
+}

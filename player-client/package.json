@@ -1,0 +1,18 @@
+{
+  "name": "admesh-player-client",
+  "version": "1.0.0",
+  "description": "Ad-Mesh Player Client Capacitor wrapper for Android",
+  "scripts": {
+    "cap:sync": "npx cap sync",
+    "cap:open": "npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/device": "^6.0.0",
+    "@capacitor/filesystem": "^6.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0"
+  }
+}

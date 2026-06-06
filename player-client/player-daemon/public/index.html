@@ -9,6 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <!-- Capacitor Core Bridge -->
+  <script src="capacitor.js"></script>
 </head>
 <body>
 
@@ -74,12 +76,29 @@
   </div>
 
   <script>
-    // --- 🌍 DETECCIÓN DE ENTORNO (PC vs SMART TV) ---
-    const IS_LOCAL_MODE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '';
+    // --- 🌍 DETECCIÓN DE ENTORNO (PC vs SMART TV vs ANDROID APK) ---
+    const IS_CAPACITOR = typeof window !== 'undefined' && window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform();
+    const IS_LOCAL_MODE = !IS_CAPACITOR && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '');
     const CLOUD_BACKEND_URL = 'https://ad-mesh.com/api/v1'; // TODO: Configura tu dominio real
     
-    function getSerialNumber() {
-      if (IS_LOCAL_MODE) return null;
+    let DEVICE_SERIAL = null;
+
+    async function initializeDeviceSerial() {
+      if (IS_LOCAL_MODE) return;
+      if (IS_CAPACITOR) {
+        try {
+          const info = await window.Capacitor.Plugins.Device.getId();
+          DEVICE_SERIAL = `ANDR-${info.identifier.toUpperCase()}`;
+        } catch (e) {
+          console.error("Error getting Capacitor device ID, using fallback:", e);
+          DEVICE_SERIAL = getFallbackSerialNumber();
+        }
+      } else {
+        DEVICE_SERIAL = getFallbackSerialNumber();
+      }
+    }
+
+    function getFallbackSerialNumber() {
       let tvSerial = localStorage.getItem('admesh_tv_serial');
       if (!tvSerial) {
         tvSerial = `SMSG-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
@@ -87,8 +106,71 @@
       }
       return tvSerial;
     }
-    
-    const DEVICE_SERIAL = getSerialNumber();
+
+    // Helper functions for Capacitor Caching
+    async function blobToBase64(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64String = reader.result.split(',')[1];
+          resolve(base64String);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    async function downloadFileCapacitor(url, filename) {
+      try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const base64Data = await blobToBase64(blob);
+        const { Filesystem } = window.Capacitor.Plugins;
+        
+        await Filesystem.writeFile({
+          path: `admesh/media/${filename}`,
+          data: base64Data,
+          directory: 'DATA',
+          recursive: true
+        });
+        
+        const uriResult = await Filesystem.getUri({
+          path: `admesh/media/${filename}`,
+          directory: 'DATA'
+        });
+        
+        return window.Capacitor.convertFileSrc(uriResult.uri);
+      } catch (error) {
+        console.error("Error downloading file via Capacitor:", error);
+        throw error;
+      }
+    }
+
+    async function cleanOrphanedFilesCapacitor(allowedFiles) {
+      try {
+        const { Filesystem } = window.Capacitor.Plugins;
+        try {
+          const result = await Filesystem.readdir({
+            path: 'admesh/media',
+            directory: 'DATA'
+          });
+          for (const file of result.files) {
+            const name = file.name;
+            if (!allowedFiles.includes(name)) {
+              console.log(`[LIMPIEZA] Eliminando archivo huérfano en Android: ${name}`);
+              await Filesystem.deleteFile({
+                path: `admesh/media/${name}`,
+                directory: 'DATA'
+              });
+            }
+          }
+        } catch (e) {
+          // Directorio no existe o error de lectura
+        }
+      } catch (err) {
+        console.error("Error cleaning files in Capacitor:", err);
+      }
+    }
 
     // Variables de Estado
     let isPaired = false;
@@ -190,14 +272,23 @@
         if (!IS_LOCAL_MODE && item.file_path) {
            const backendBaseUrl = CLOUD_BACKEND_URL.replace('/api/v1', '');
            mediaUrl = `${backendBaseUrl}/${item.file_path}`;
-           try {
-             const cache = await caches.open('admesh-media-cache');
-             const cachedRes = await cache.match(mediaUrl);
-             if (!cachedRes) {
-               console.log(`[TV-CACHE] Descargando recurso a la TV: ${mediaUrl}`);
-               await cache.add(mediaUrl);
+           if (IS_CAPACITOR) {
+             try {
+               const fileName = item.file_path.split('/').pop();
+               mediaUrl = await downloadFileCapacitor(mediaUrl, fileName);
+             } catch (e) {
+               console.error("Error cargando recurso en Capacitor, usando remota:", e);
              }
-           } catch(e) { console.error("Error en cache de TV:", e); }
+           } else {
+             try {
+               const cache = await caches.open('admesh-media-cache');
+               const cachedRes = await cache.match(mediaUrl);
+               if (!cachedRes) {
+                 console.log(`[TV-CACHE] Descargando recurso a la TV: ${mediaUrl}`);
+                 await cache.add(mediaUrl);
+               }
+             } catch(e) { console.error("Error en cache de TV:", e); }
+           }
         }
 
         const triggerTransition = () => {
@@ -450,15 +541,35 @@
         if (zonePlayers['zone_b']) zonePlayers['zone_b'].setPlaylist(config.zone_b || { items: [] });
         if (zonePlayers['zone_c']) zonePlayers['zone_c'].setPlaylist(config.zone_c || { items: [] });
 
+        if (IS_CAPACITOR && hasItems) {
+          const allowedFiles = [];
+          const extractFiles = (zone) => {
+            if (zone && zone.items) {
+              zone.items.forEach(item => {
+                if (item.file_path) {
+                  allowedFiles.push(item.file_path.split('/').pop());
+                }
+              });
+            }
+          };
+          extractFiles(config.zone_a);
+          extractFiles(config.zone_b);
+          extractFiles(config.zone_c);
+          cleanOrphanedFilesCapacitor(allowedFiles);
+        }
+
       } catch (err) {
         console.error("[PLAYER] Error conectando con el Daemon local:", err);
       }
     }
 
-    // Monitorear estado cada 5 segundos
-    setInterval(checkState, 5000);
-    // Primera consulta inmediata
-    checkState();
+    // Inicializar serial de dispositivo y luego arrancar monitoreo
+    initializeDeviceSerial().then(() => {
+      // Monitorear estado cada 5 segundos
+      setInterval(checkState, 5000);
+      // Primera consulta inmediata
+      checkState();
+    });
   </script>
 </body>
 </html>

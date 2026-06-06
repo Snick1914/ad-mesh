@@ -185,3 +185,25 @@ def update_device_configuration(
             detail=message
         )
     return device
+
+@router.delete("/{device_id}/unpair", response_model=DeviceOut)
+def unpair_device(
+    device_id: int,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    """
+    Desvincular una pantalla del usuario actual.
+    """
+    service = DeviceService(db)
+    success, message, device = service.unpair_device(
+        device_id=device_id,
+        user_id=current_user.id
+    )
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=message
+        )
+    return device
+

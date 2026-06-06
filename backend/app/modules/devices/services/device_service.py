@@ -119,3 +119,26 @@ class DeviceService:
         self.db.commit()
         self.db.refresh(device)
         return True, "Configuración de dispositivo actualizada con éxito.", device
+
+    def unpair_device(self, device_id: int, user_id: int) -> tuple[bool, str, Device]:
+        device = self.get_by_id(device_id)
+        if not device:
+            return False, "Dispositivo no encontrado.", None
+        if device.user_id != user_id:
+            return False, "No tienes permisos para desvincular este dispositivo.", None
+
+        # Desvincular dispositivo
+        device.is_paired = False
+        device.user_id = None
+        device.name = None
+        device.playlist_id = None
+        device.playlist_b_id = None
+        device.playlist_c_id = None
+        # Generar código nuevo listo para volver a emparejar
+        device.pairing_code = "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+        
+        self.db.add(device)
+        self.db.commit()
+        self.db.refresh(device)
+        return True, "Dispositivo desvinculado con éxito.", device
+

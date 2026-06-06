@@ -557,6 +557,35 @@
 
         // 1. Manejo del Emparejamiento y Modo Offline
         if (!state.is_paired) {
+          if (isPaired) {
+            // ¡Ha sido desvinculado! Ejecutar limpieza a estado de fábrica
+            console.log("[FACTORY RESET] La pantalla ha sido desvinculada. Limpiando almacenamiento local...");
+            if (IS_CAPACITOR) {
+              try {
+                const { Filesystem } = window.Capacitor.Plugins;
+                try {
+                  const result = await Filesystem.readdir({
+                    path: 'admesh/media',
+                    directory: 'DATA'
+                  });
+                  for (const file of result.files) {
+                    await Filesystem.deleteFile({
+                      path: `admesh/media/${file.name}`,
+                      directory: 'DATA'
+                    });
+                  }
+                  console.log("[FACTORY RESET] Medios eliminados con éxito.");
+                } catch (e) {}
+              } catch (err) {
+                console.error("[FACTORY RESET] Error en limpieza nativa:", err);
+              }
+            } else {
+              try {
+                await caches.delete('admesh-media-cache');
+                console.log("[FACTORY RESET] Caché web eliminada.");
+              } catch (e) {}
+            }
+          }
           isPaired = false;
           stopAllPlayback();
           

@@ -56,6 +56,31 @@ const getDeviceSerial = () => {
 const DEVICE_SERIAL = getDeviceSerial();
 console.log(`[DEVICE] Iniciando reproductor con número de serie: ${DEVICE_SERIAL}`);
 
+// --- 🧹 RESTABLECIMIENTO DE FÁBRICA LOCAL ---
+const factoryResetLocal = () => {
+  console.log("[FACTORY RESET] Iniciando restablecimiento de fábrica del reproductor...");
+  // 1. Borrar archivos multimedia
+  try {
+    const files = fs.readdirSync(MEDIA_DIR);
+    files.forEach(file => {
+      fs.unlinkSync(path.join(MEDIA_DIR, file));
+    });
+    console.log("[FACTORY RESET] Directorio de medios limpiado.");
+  } catch (err) {
+    console.error("[FACTORY RESET] Error limpiando medios:", err.message);
+  }
+  
+  // 2. Restablecer CONFIG_FILE
+  try {
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify({ is_paired: false, pairing_code: "" }, null, 2));
+  } catch (err) {}
+  
+  // 3. Limpiar PLAYLIST_FILE
+  try {
+    fs.writeFileSync(PLAYLIST_FILE, JSON.stringify({ layout: 'single', resolution: '1920x1080', zone_a: { items: [] }, zone_b: { items: [] }, zone_c: { items: [] } }, null, 2));
+  } catch (err) {}
+};
+
 // --- 📊 METRICAS EN TIEMPO REAL (TELEMETRÍA DE LA PI) ---
 const getSystemMetrics = () => {
   let temp = 0.0;
@@ -177,11 +202,17 @@ const syncLoop = async () => {
     // 3. Enviar Heartbeat (Latido) si ya está emparejado
     console.log(`[HEARTBEAT] Enviando signos vitales (Temp: ${metrics.cpu_temp}°C, IP: ${metrics.ip_address})`);
     try {
-      await axios.post(`${BACKEND_URL}/devices/${DEVICE_SERIAL}/heartbeat`, {
+      const hbResponse = await axios.post(`${BACKEND_URL}/devices/${DEVICE_SERIAL}/heartbeat`, {
         ip_address: metrics.ip_address,
         storage_used_gb: metrics.storage_used_gb,
         status: "online"
       });
+      if (hbResponse.data && hbResponse.data.is_paired === false) {
+        console.log(`[HEARTBEAT] El servidor indica que este dispositivo fue desvinculado.`);
+        factoryResetLocal();
+        isSyncing = false;
+        return;
+      }
     } catch (e) {
       console.error(`[HEARTBEAT] Error enviando latido:`, e.message);
     }
@@ -283,7 +314,7 @@ const syncLoop = async () => {
     // Si el backend dice que el dispositivo no se encuentra, desvincularlo localmente para forzar emparejamiento
     if (err.response && err.response.status === 404) {
       console.log(`[PAIRED] Dispositivo no encontrado en base de datos. Reseteando vinculación...`);
-      fs.writeFileSync(CONFIG_FILE, JSON.stringify({ is_paired: false, pairing_code: "" }, null, 2));
+      factoryResetLocal();
     }
   } finally {
     isSyncing = false;

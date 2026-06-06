@@ -91,13 +91,16 @@ body, html {
 }
 
 .logo {
-  font-size: 2.2rem;
-  font-weight: 800;
-  letter-spacing: -1px;
-  background: linear-gradient(135deg, #00F0FF 0%, #7928CA 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
   margin-bottom: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.logo svg {
+  height: 45px;
+  width: auto;
+  display: block;
 }
 
 h2 {

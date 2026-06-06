@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, MonitorPlay, Film, ListMusic, Bell, User, LogOut, Menu, X, Cpu } from 'lucide-react';
+import { MonitorPlay, Film, ListMusic, Bell, User, LogOut, Menu, X, Cpu } from 'lucide-react';
 
 export default function DashboardLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);

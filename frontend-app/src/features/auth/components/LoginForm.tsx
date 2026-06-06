@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, Loader2, LayoutDashboard } from 'lucide-react';
+import { Mail, Lock, Loader2 } from 'lucide-react';
 import { GoogleLogin } from '@react-oauth/google';
 import { AuthService } from '../AuthService';
 

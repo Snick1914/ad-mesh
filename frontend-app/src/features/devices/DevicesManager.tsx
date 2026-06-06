@@ -36,6 +36,39 @@ export default function DevicesManager() {
   });
   const [isSavingConfig, setIsSavingConfig] = useState(false);
   const [configSuccess, setConfigSuccess] = useState(false);
+  const [isUnpairing, setIsUnpairing] = useState(false);
+
+  const handleUnpairDevice = async () => {
+    if (!selectedDevice) return;
+    if (!window.confirm(`¿Estás seguro de que deseas desvincular la pantalla "${selectedDevice.name}"? Se borrarán todos sus archivos descargados y volverá al estado de fábrica.`)) {
+      return;
+    }
+    
+    setIsUnpairing(true);
+    setError('');
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/devices/${selectedDevice.id}/unpair`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail || 'Error al desvincular la pantalla.');
+      }
+      
+      setSelectedDevice(null);
+      await fetchDevices();
+    } catch (err: any) {
+      setError(err.message || 'Error al desvincular la pantalla.');
+    } finally {
+      setIsUnpairing(false);
+    }
+  };
 
   const fetchDevices = async () => {
     setIsLoading(true);
@@ -592,6 +625,21 @@ export default function DevicesManager() {
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Zona de Peligro / Desvincular */}
+              <div className="pt-6 border-t border-red-500/20 space-y-3">
+                <span className="block text-xs font-bold text-red-400 uppercase tracking-wider">Zona de Peligro</span>
+                <p className="text-xs text-gray-500">Al desvincular el reproductor, se borrará su asociación, se limpiará su caché de medios local y se reiniciará a su estado de fábrica mostrando un nuevo código de vinculación.</p>
+                <button
+                  type="button"
+                  disabled={isUnpairing}
+                  onClick={handleUnpairDevice}
+                  className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 font-semibold py-2.5 rounded-xl transition-all text-xs flex items-center justify-center gap-2 mb-4"
+                >
+                  {isUnpairing ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  Desvincular Pantalla (Restablecer)
+                </button>
               </div>
 
               {/* Botones de Guardado */}

@@ -164,27 +164,69 @@
         });
       }
 
+      /**
+       * Descarga un archivo a almacenamiento local de Capacitor.
+       * ESTRATEGIA:
+       *   1. Si el archivo YA existe → retorna la URI local directamente (sin descargar).
+       *   2. Si CapacitorHttp.downloadFile está disponible → descarga nativa a disco
+       *      (streaming, sin base64 en RAM — crítico para videos grandes).
+       *   3. Fallback → fetch + base64 (solo aceptable para imágenes pequeñas).
+       */
       async function downloadFileCapacitor(url, filename) {
+        const { Filesystem } = window.Capacitor.Plugins;
+
+        // ── 1. Verificar si ya existe localmente ──────────────────────
         try {
-          const response = await fetch(url);
-          const blob = await response.blob();
-          const base64Data = await blobToBase64(blob);
-          const { Filesystem } = window.Capacitor.Plugins;
-          await Filesystem.writeFile({
-            path: `admesh/media/${filename}`,
-            data: base64Data,
-            directory: 'DATA',
-            recursive: true
-          });
-          const uriResult = await Filesystem.getUri({
+          // Filesystem.stat arroja un error si el archivo no existe
+          await Filesystem.stat({
             path: `admesh/media/${filename}`,
             directory: 'DATA'
           });
-          return window.Capacitor.convertFileSrc(uriResult.uri);
-        } catch (error) {
-          console.error("Error downloading file via Capacitor:", error);
-          throw error;
+          const existing = await Filesystem.getUri({
+            path: `admesh/media/${filename}`,
+            directory: 'DATA'
+          });
+          if (existing && existing.uri) {
+            console.log(`[CACHE-HIT] ${filename}`);
+            return window.Capacitor.convertFileSrc(existing.uri);
+          }
+        } catch (_notFound) {
+          // archivo no existe aún → continuar con descarga
         }
+
+        // ── 2. Descarga nativa sin base64 (CapacitorHttp) ────────────
+        const CapHttp = window.Capacitor.Plugins.CapacitorHttp;
+        if (CapHttp && typeof CapHttp.downloadFile === 'function') {
+          try {
+            console.log(`[DOWNLOAD-NATIVE] ${filename}`);
+            const result = await CapHttp.downloadFile({
+              url:           url,
+              filePath:      `admesh/media/${filename}`,
+              fileDirectory: 'DATA',
+            });
+            // result.path es la URI nativa del archivo
+            return window.Capacitor.convertFileSrc(result.path);
+          } catch (e) {
+            console.warn(`[DOWNLOAD-NATIVE] Falló, usando fallback base64:`, e);
+          }
+        }
+
+        // ── 3. Fallback base64 (solo imágenes / archivos pequeños) ───
+        console.log(`[DOWNLOAD-B64] ${filename}`);
+        const response  = await fetch(url);
+        const blob      = await response.blob();
+        const base64Data = await blobToBase64(blob);
+        await Filesystem.writeFile({
+          path:      `admesh/media/${filename}`,
+          data:      base64Data,
+          directory: 'DATA',
+          recursive: true
+        });
+        const uriResult = await Filesystem.getUri({
+          path:      `admesh/media/${filename}`,
+          directory: 'DATA'
+        });
+        return window.Capacitor.convertFileSrc(uriResult.uri);
       }
 
       async function cleanOrphanedFilesCapacitor(allowedFiles) {
@@ -292,11 +334,15 @@
             const backendBaseUrl = CLOUD_BACKEND_URL.replace('/api/v1', '');
             mediaUrl = `${backendBaseUrl}/${item.file_path}`;
             if (IS_CAPACITOR) {
-              try {
-                const fileName = item.file_path.split('/').pop();
-                mediaUrl = await downloadFileCapacitor(mediaUrl, fileName);
-              } catch (e) {
-                console.error("Error cargando recurso en Capacitor, usando remota:", e);
+              if (item.file_type.startsWith('video')) {
+                console.log(`[PLAY-ONLINE] Video: ${mediaUrl}`);
+              } else {
+                try {
+                  const fileName = item.file_path.split('/').pop();
+                  mediaUrl = await downloadFileCapacitor(mediaUrl, fileName);
+                } catch (e) {
+                  console.error("Error cargando recurso en Capacitor, usando remota:", e);
+                }
               }
             } else {
               try {
@@ -334,23 +380,46 @@
             el.autoplay    = true;
             el.muted       = true;
             el.playsInline = true;
+            el.preload     = 'auto';
             if (items.length === 1) el.loop = true;
             el.style.width     = '100%';
             el.style.height    = '100%';
             el.style.objectFit = 'cover';
+
+            // Android WebView a veces dispara 'canplay' pero no 'canplaythrough'
+            // para archivos grandes. Escuchar ambos y tomar el primero.
+            el.oncanplay        = triggerTransition;
             el.oncanplaythrough = triggerTransition;
+
+            // Si el video falla (formato no soportado, URI inválida, etc.)
+            // hacer avanzar al siguiente ítem en lugar de quedar congelado.
+            el.onerror = (e) => {
+              console.error(`[VIDEO-ERROR] Zone-${this.zoneId} no pudo cargar: ${mediaUrl}`, e);
+              if (!loaded) {
+                loaded = true; // evitar doble disparo
+                this.currentIndex = nextIndex;
+                setTimeout(() => this.playNext(), 500);
+              }
+            };
+
             el.src = mediaUrl;
+            el.load(); // forzar inicio de carga en Android
           } else {
             el = document.createElement('img');
             el.style.width     = '100%';
             el.style.height    = '100%';
             el.style.objectFit = 'cover';
+            el.onerror = () => {
+              console.error(`[IMG-ERROR] Zone-${this.zoneId}: ${mediaUrl}`);
+              if (!loaded) { loaded = true; this.currentIndex = nextIndex; setTimeout(() => this.playNext(), 500); }
+            };
             el.onload = triggerTransition;
             el.src = mediaUrl;
           }
 
           nextLayerEl.appendChild(el);
-          setTimeout(triggerTransition, 3000); // fallback
+          // Fallback: si en 8s no disparó ningún evento (red muy lenta / formato raro)
+          setTimeout(triggerTransition, 8000);
         }
       }
 
@@ -369,24 +438,24 @@
         const topRow = playerContainer.querySelector('.top-row');
 
         if (layoutType === 'split-h') {
-          const sr = lc.split_ratio != null ? lc.split_ratio : 50;
+          const sr = lc.zone_a_height ?? lc.split_ratio ?? 50;
           if (zoneA) zoneA.style.height = `${sr}%`;
           if (zoneB) zoneB.style.height = `${100 - sr}%`;
         }
 
         if (layoutType === 'split-v') {
-          const sr = lc.split_ratio != null ? lc.split_ratio : 50;
+          const sr = lc.zone_a_width ?? lc.split_ratio ?? 50;
           if (zoneA) zoneA.style.width = `${sr}%`;
           if (zoneB) zoneB.style.width = `${100 - sr}%`;
         }
 
         if (layoutType === 'l-shape') {
-          const mr = lc.main_ratio   != null ? lc.main_ratio   : 70;
-          const br = lc.bottom_ratio != null ? lc.bottom_ratio : 20;
-          if (topRow) topRow.style.height = `${100 - br}%`;
-          if (zoneC)  zoneC.style.height  = `${br}%`;
-          if (zoneA)  zoneA.style.width   = `${mr}%`;
-          if (zoneB)  zoneB.style.width   = `${100 - mr}%`;
+          const topH = lc.top_row_height ?? (100 - (lc.bottom_ratio ?? 15));
+          const aW   = lc.zone_a_width   ?? (lc.main_ratio ?? 70);
+          if (topRow) topRow.style.height = `${topH}%`;
+          if (zoneC)  zoneC.style.height  = `${100 - topH}%`;
+          if (zoneA)  zoneA.style.width   = `${aW}%`;
+          if (zoneB)  zoneB.style.width   = `${100 - aW}%`;
         }
       }
 

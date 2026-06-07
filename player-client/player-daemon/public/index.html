@@ -378,13 +378,13 @@
           if (item.file_type.startsWith('video')) {
             el = document.createElement('video');
             el.autoplay    = true;
-            el.muted       = true;
+            el.muted       = false;
             el.playsInline = true;
             el.preload     = 'auto';
             if (items.length === 1) el.loop = true;
             el.style.width     = '100%';
             el.style.height    = '100%';
-            el.style.objectFit = 'cover';
+            el.style.objectFit = 'contain';
 
             // Android WebView a veces dispara 'canplay' pero no 'canplaythrough'
             // para archivos grandes. Escuchar ambos y tomar el primero.
@@ -408,7 +408,7 @@
             el = document.createElement('img');
             el.style.width     = '100%';
             el.style.height    = '100%';
-            el.style.objectFit = 'cover';
+            el.style.objectFit = 'contain';
             el.onerror = () => {
               console.error(`[IMG-ERROR] Zone-${this.zoneId}: ${mediaUrl}`);
               if (!loaded) { loaded = true; this.currentIndex = nextIndex; setTimeout(() => this.playNext(), 500); }

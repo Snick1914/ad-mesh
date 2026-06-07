@@ -1,6 +1,6 @@
 from pydantic import BaseModel
-from typing import Optional
-from datetime import datetime
+from typing import Optional, Dict, Any, List
+from datetime import datetime, time
 
 class DeviceBase(BaseModel):
     name: Optional[str] = None
@@ -24,6 +24,7 @@ class DeviceOut(BaseModel):
     storage_limit_gb: float
     resolution: str
     layout: str
+    layout_config: Optional[Dict[str, Any]] = None
     playlist_id: Optional[int]
     playlist_b_id: Optional[int]
     playlist_c_id: Optional[int]
@@ -34,6 +35,7 @@ class DeviceOut(BaseModel):
 class DeviceConfigUpdate(BaseModel):
     resolution: Optional[str] = None
     layout: Optional[str] = None
+    layout_config: Optional[Dict[str, Any]] = None
     playlist_id: Optional[int] = None
     playlist_b_id: Optional[int] = None
     playlist_c_id: Optional[int] = None
@@ -59,3 +61,20 @@ class PairingCodeResponse(BaseModel):
     serial_number: str
     pairing_code: str
     is_paired: bool
+
+class DeviceScheduleBase(BaseModel):
+    zone: str
+    playlist_id: int
+    start_time: time
+    end_time: time
+    days_of_week: List[int]
+
+class DeviceScheduleCreate(DeviceScheduleBase):
+    pass
+
+class DeviceScheduleOut(DeviceScheduleBase):
+    id: int
+    device_id: int
+
+    class Config:
+        from_attributes = True

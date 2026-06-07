@@ -18,6 +18,7 @@ export interface Device {
   storageTotal: number; // in GB
   resolution?: string;
   layout?: 'single' | 'split-h' | 'split-v' | 'l-shape';
+  layout_config?: Record<string, any> | null;
   playlist_id?: number | null;
   playlist_b_id?: number | null;
   playlist_c_id?: number | null;

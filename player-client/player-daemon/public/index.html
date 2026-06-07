@@ -15,10 +15,7 @@
 <body>
 
   <!-- CONTENEDOR PRINCIPAL DEL REPRODUCTOR (SEAMLESS DOUBLE-BUFFER) -->
-  <div id="player-container">
-    <div id="layer-a" class="player-layer active"></div>
-    <div id="layer-b" class="player-layer"></div>
-  </div>
+  <div id="player-container"></div>
 
   <!-- PANTALLA DE EMPAREJAMIENTO (PAIRING SCREEN) -->
   <div id="pairing-screen" class="overlay-screen">
@@ -120,582 +117,600 @@
     }
 
     if (!otaLoading) {
-      // --- 🌍 DETECCIÓN DE ENTORNO (PC vs SMART TV vs ANDROID APK) ---
-      const IS_CAPACITOR = typeof window !== 'undefined' && window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform();
-    const IS_LOCAL_MODE = !IS_CAPACITOR && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '');
-    
-    const CLOUD_BACKEND_URL = 'https://api.ad-mesh.com/api/v1';
+      // --- 🌍 DETECCIÓN DE ENTORNO ---
+      const IS_CAPACITOR = typeof window !== 'undefined' && window.Capacitor &&
+        typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform();
+      const IS_LOCAL_MODE = !IS_CAPACITOR && (
+        window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1' ||
+        window.location.hostname === ''
+      );
+      
+      const CLOUD_BACKEND_URL = 'https://api.ad-mesh.com/api/v1';
+      
+      let DEVICE_SERIAL = null;
 
-    
-    let DEVICE_SERIAL = null;
-
-    async function initializeDeviceSerial() {
-      if (IS_LOCAL_MODE) return;
-      if (IS_CAPACITOR) {
-        try {
-          const info = await window.Capacitor.Plugins.Device.getId();
-          DEVICE_SERIAL = `ANDR-${info.identifier.toUpperCase()}`;
-        } catch (e) {
-          console.error("Error getting Capacitor device ID, using fallback:", e);
+      async function initializeDeviceSerial() {
+        if (IS_LOCAL_MODE) return;
+        if (IS_CAPACITOR) {
+          try {
+            const info = await window.Capacitor.Plugins.Device.getId();
+            DEVICE_SERIAL = `ANDR-${info.identifier.toUpperCase()}`;
+          } catch (e) {
+            console.error("Error getting Capacitor device ID, using fallback:", e);
+            DEVICE_SERIAL = getFallbackSerialNumber();
+          }
+        } else {
           DEVICE_SERIAL = getFallbackSerialNumber();
         }
-      } else {
-        DEVICE_SERIAL = getFallbackSerialNumber();
       }
-    }
 
-    function getFallbackSerialNumber() {
-      let tvSerial = localStorage.getItem('admesh_tv_serial');
-      if (!tvSerial) {
-        tvSerial = `SMSG-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
-        localStorage.setItem('admesh_tv_serial', tvSerial);
+      function getFallbackSerialNumber() {
+        let tvSerial = localStorage.getItem('admesh_tv_serial');
+        if (!tvSerial) {
+          tvSerial = `SMSG-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+          localStorage.setItem('admesh_tv_serial', tvSerial);
+        }
+        return tvSerial;
       }
-      return tvSerial;
-    }
 
-    // Helper functions for Capacitor Caching
-    async function blobToBase64(blob) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64String = reader.result.split(',')[1];
-          resolve(base64String);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-    }
-
-    async function downloadFileCapacitor(url, filename) {
-      try {
-        const response = await fetch(url);
-        const blob = await response.blob();
-        const base64Data = await blobToBase64(blob);
-        const { Filesystem } = window.Capacitor.Plugins;
-        
-        await Filesystem.writeFile({
-          path: `admesh/media/${filename}`,
-          data: base64Data,
-          directory: 'DATA',
-          recursive: true
+      // ── Capacitor file helpers ────────────────────────────────────
+      async function blobToBase64(blob) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result.split(',')[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
         });
-        
-        const uriResult = await Filesystem.getUri({
-          path: `admesh/media/${filename}`,
-          directory: 'DATA'
-        });
-        
-        return window.Capacitor.convertFileSrc(uriResult.uri);
-      } catch (error) {
-        console.error("Error downloading file via Capacitor:", error);
-        throw error;
       }
-    }
 
-    async function cleanOrphanedFilesCapacitor(allowedFiles) {
-      try {
-        const { Filesystem } = window.Capacitor.Plugins;
+      async function downloadFileCapacitor(url, filename) {
         try {
-          const result = await Filesystem.readdir({
-            path: 'admesh/media',
+          const response = await fetch(url);
+          const blob = await response.blob();
+          const base64Data = await blobToBase64(blob);
+          const { Filesystem } = window.Capacitor.Plugins;
+          await Filesystem.writeFile({
+            path: `admesh/media/${filename}`,
+            data: base64Data,
+            directory: 'DATA',
+            recursive: true
+          });
+          const uriResult = await Filesystem.getUri({
+            path: `admesh/media/${filename}`,
             directory: 'DATA'
           });
-          for (const file of result.files) {
-            const name = file.name;
-            if (!allowedFiles.includes(name)) {
-              console.log(`[LIMPIEZA] Eliminando archivo huérfano en Android: ${name}`);
-              await Filesystem.deleteFile({
-                path: `admesh/media/${name}`,
-                directory: 'DATA'
-              });
+          return window.Capacitor.convertFileSrc(uriResult.uri);
+        } catch (error) {
+          console.error("Error downloading file via Capacitor:", error);
+          throw error;
+        }
+      }
+
+      async function cleanOrphanedFilesCapacitor(allowedFiles) {
+        try {
+          const { Filesystem } = window.Capacitor.Plugins;
+          try {
+            const result = await Filesystem.readdir({ path: 'admesh/media', directory: 'DATA' });
+            for (const file of result.files) {
+              if (!allowedFiles.includes(file.name)) {
+                console.log(`[LIMPIEZA] Eliminando archivo huérfano: ${file.name}`);
+                await Filesystem.deleteFile({ path: `admesh/media/${file.name}`, directory: 'DATA' });
+              }
+            }
+          } catch (e) { /* directorio no existe */ }
+        } catch (err) {
+          console.error("Error cleaning files in Capacitor:", err);
+        }
+      }
+
+      // ── Estado global ─────────────────────────────────────────────
+      let isPaired      = false;
+      let currentLayout = null;
+      let currentLCKey  = '';   // serialización de layout_config para detectar cambios
+      let zonePlayers   = {};
+
+      const pairingScreen  = document.getElementById('pairing-screen');
+      const standbyScreen  = document.getElementById('standby-screen');
+      const pairingCodeEl  = document.getElementById('pairing-code');
+      const serialNumberEl = document.getElementById('serial-number');
+      const playerContainer = document.getElementById('player-container');
+
+      // ── 📺 MOTOR DE REPRODUCCIÓN POR ZONA ────────────────────────
+      class ZonePlayer {
+        constructor(zoneId, zoneElement) {
+          this.zoneId       = zoneId;
+          this.zoneElement  = zoneElement;
+          this.playlist     = { playlist_id: null, items: [] };
+          this.currentIndex = 0;
+          this.activeLayer  = 'a';
+          this.timeout      = null;
+          this.mediaElement = null;
+
+          this.layerA = document.createElement('div');
+          this.layerA.className = 'zone-layer active';
+          this.layerB = document.createElement('div');
+          this.layerB.className = 'zone-layer';
+
+          this.zoneElement.appendChild(this.layerA);
+          this.zoneElement.appendChild(this.layerB);
+        }
+
+        setPlaylist(newPlaylist) {
+          const newItems = newPlaylist.items || [];
+          const oldItems = this.playlist.items || [];
+          if (this.playlist.playlist_id === newPlaylist.playlist_id &&
+              oldItems.length === newItems.length) return;
+
+          console.log(`[ZONE-${this.zoneId}] Playlist → "${newPlaylist.name || 'Sin nombre'}" (${newItems.length} items)`);
+          this.stop();
+          this.playlist     = newPlaylist;
+          this.currentIndex = 0;
+          this.start();
+        }
+
+        start() {
+          if (!this.playlist.items || this.playlist.items.length === 0) { this.clearLayers(); return; }
+          this.playNext();
+        }
+
+        stop() {
+          clearTimeout(this.timeout);
+          if (this.mediaElement) {
+            try { if (typeof this.mediaElement.pause === 'function') this.mediaElement.pause(); } catch(e) {}
+            this.mediaElement = null;
+          }
+          this.clearLayers();
+          this.playlist = { playlist_id: null, items: [] };
+        }
+
+        clearLayers() {
+          this.layerA.innerHTML = '';
+          this.layerB.innerHTML = '';
+          this.layerA.className = 'zone-layer active';
+          this.layerB.className = 'zone-layer';
+          this.activeLayer = 'a';
+        }
+
+        async playNext() {
+          const items = this.playlist.items || [];
+          if (items.length === 0) return;
+
+          const item      = items[this.currentIndex];
+          const nextIndex = (this.currentIndex + 1) % items.length;
+
+          const currentLayerEl = this.activeLayer === 'a' ? this.layerA : this.layerB;
+          const nextLayerEl    = this.activeLayer === 'a' ? this.layerB : this.layerA;
+          nextLayerEl.innerHTML = '';
+
+          let el;
+          let loaded = false;
+
+          // URL inteligente
+          let mediaUrl = item.local_path;
+          if (!IS_LOCAL_MODE && item.file_path) {
+            const backendBaseUrl = CLOUD_BACKEND_URL.replace('/api/v1', '');
+            mediaUrl = `${backendBaseUrl}/${item.file_path}`;
+            if (IS_CAPACITOR) {
+              try {
+                const fileName = item.file_path.split('/').pop();
+                mediaUrl = await downloadFileCapacitor(mediaUrl, fileName);
+              } catch (e) {
+                console.error("Error cargando recurso en Capacitor, usando remota:", e);
+              }
+            } else {
+              try {
+                const cache = await caches.open('admesh-media-cache');
+                if (!await cache.match(mediaUrl)) {
+                  console.log(`[TV-CACHE] Descargando: ${mediaUrl}`);
+                  await cache.add(mediaUrl);
+                }
+              } catch(e) { console.error("Error en cache de TV:", e); }
             }
           }
-        } catch (e) {
-          // Directorio no existe o error de lectura
-        }
-      } catch (err) {
-        console.error("Error cleaning files in Capacitor:", err);
-      }
-    }
 
-    // Variables de Estado
-    let isPaired = false;
-    let currentLayout = null;
-    let zonePlayers = {};
+          const triggerTransition = () => {
+            if (loaded) return;
+            loaded = true;
+            nextLayerEl.classList.add('active');
+            currentLayerEl.classList.remove('active');
+            this.activeLayer  = this.activeLayer === 'a' ? 'b' : 'a';
+            this.currentIndex = nextIndex;
+            this.mediaElement = el;
 
-    // Elementos DOM
-    const pairingScreen = document.getElementById('pairing-screen');
-    const standbyScreen = document.getElementById('standby-screen');
-    const pairingCodeEl = document.getElementById('pairing-code');
-    const serialNumberEl = document.getElementById('serial-number');
-    const playerContainer = document.getElementById('player-container');
+            if (item.file_type.startsWith('video') && items.length === 1) return;
 
-    // --- 📺 MOTOR DE REPRODUCCIÓN POR ZONA (DOUBLE-BUFFER HIGH PERFORMANCE) ---
-    class ZonePlayer {
-      constructor(zoneId, zoneElement) {
-        this.zoneId = zoneId;
-        this.zoneElement = zoneElement;
-        this.playlist = { playlist_id: null, items: [] };
-        this.currentIndex = 0;
-        this.activeLayer = 'a';
-        this.timeout = null;
-        this.mediaElement = null;
-
-        // Crear las dos capas del buffer de este zone player
-        this.layerA = document.createElement('div');
-        this.layerA.className = 'zone-layer active';
-        this.layerB = document.createElement('div');
-        this.layerB.className = 'zone-layer';
-
-        this.zoneElement.appendChild(this.layerA);
-        this.zoneElement.appendChild(this.layerB);
-      }
-
-      setPlaylist(newPlaylist) {
-        const newItems = newPlaylist.items || [];
-        const oldItems = this.playlist.items || [];
-        
-        // Si la playlist no cambió, no reiniciar
-        if (this.playlist.playlist_id === newPlaylist.playlist_id && 
-            oldItems.length === newItems.length) {
-          return;
-        }
-
-        console.log(`[ZONE-${this.zoneId}] Sincronizando playlist "${newPlaylist.name || 'Sin nombre'}" (${newItems.length} items)`);
-        this.stop();
-        this.playlist = newPlaylist;
-        this.currentIndex = 0;
-        this.start();
-      }
-
-      start() {
-        if (!this.playlist.items || this.playlist.items.length === 0) {
-          this.clearLayers();
-          return;
-        }
-        this.playNext();
-      }
-
-      stop() {
-        clearTimeout(this.timeout);
-        if (this.mediaElement) {
-          try {
-            if (typeof this.mediaElement.pause === 'function') {
-              this.mediaElement.pause();
+            let duration = (item.duration_seconds || 10) * 1000;
+            if (item.file_type.startsWith('video')) {
+              el.onended = () => this.playNext();
+              this.timeout = setTimeout(() => this.playNext(), Math.max(duration, 45000));
+            } else {
+              this.timeout = setTimeout(() => this.playNext(), duration);
             }
-          } catch(e) {}
-          this.mediaElement = null;
+          };
+
+          if (item.file_type.startsWith('video')) {
+            el = document.createElement('video');
+            el.autoplay    = true;
+            el.muted       = true;
+            el.playsInline = true;
+            if (items.length === 1) el.loop = true;
+            el.style.width     = '100%';
+            el.style.height    = '100%';
+            el.style.objectFit = 'cover';
+            el.oncanplaythrough = triggerTransition;
+            el.src = mediaUrl;
+          } else {
+            el = document.createElement('img');
+            el.style.width     = '100%';
+            el.style.height    = '100%';
+            el.style.objectFit = 'cover';
+            el.onload = triggerTransition;
+            el.src = mediaUrl;
+          }
+
+          nextLayerEl.appendChild(el);
+          setTimeout(triggerTransition, 3000); // fallback
         }
-        this.clearLayers();
-        this.playlist = { playlist_id: null, items: [] };
       }
 
-      clearLayers() {
-        this.layerA.innerHTML = '';
-        this.layerB.innerHTML = '';
-        this.layerA.className = 'zone-layer active';
-        this.layerB.className = 'zone-layer';
-        this.activeLayer = 'a';
-      }
+      // ── 📐 CONFIGURADOR DINÁMICO MULTI-ZONA + PROPORCIONES ───────
 
-      async playNext() {
-        const items = this.playlist.items || [];
-        if (items.length === 0) return;
+      /**
+       * Aplica layout_config (proporciones personalizadas) al contenedor ya creado.
+       * @param {string} layoutType
+       * @param {object} lc  - layout_config del backend
+       */
+      function applyLayoutConfig(layoutType, lc) {
+        if (!lc) return;
+        const zoneA = document.getElementById('zone-a');
+        const zoneB = document.getElementById('zone-b');
+        const zoneC = document.getElementById('zone-c');
+        const topRow = playerContainer.querySelector('.top-row');
 
-        const item = items[this.currentIndex];
-        const nextIndex = (this.currentIndex + 1) % items.length;
-
-        const currentLayerEl = this.activeLayer === 'a' ? this.layerA : this.layerB;
-        const nextLayerEl = this.activeLayer === 'a' ? this.layerB : this.layerA;
-
-        nextLayerEl.innerHTML = '';
-
-        let el;
-        let loaded = false;
-
-        // Obtener URL inteligente (Local o Cloud Cache)
-        let mediaUrl = item.local_path;
-        if (!IS_LOCAL_MODE && item.file_path) {
-           const backendBaseUrl = CLOUD_BACKEND_URL.replace('/api/v1', '');
-           mediaUrl = `${backendBaseUrl}/${item.file_path}`;
-           if (IS_CAPACITOR) {
-             try {
-               const fileName = item.file_path.split('/').pop();
-               mediaUrl = await downloadFileCapacitor(mediaUrl, fileName);
-             } catch (e) {
-               console.error("Error cargando recurso en Capacitor, usando remota:", e);
-             }
-           } else {
-             try {
-               const cache = await caches.open('admesh-media-cache');
-               const cachedRes = await cache.match(mediaUrl);
-               if (!cachedRes) {
-                 console.log(`[TV-CACHE] Descargando recurso a la TV: ${mediaUrl}`);
-                 await cache.add(mediaUrl);
-               }
-             } catch(e) { console.error("Error en cache de TV:", e); }
-           }
+        if (layoutType === 'split-h') {
+          const sr = lc.split_ratio != null ? lc.split_ratio : 50;
+          if (zoneA) zoneA.style.height = `${sr}%`;
+          if (zoneB) zoneB.style.height = `${100 - sr}%`;
         }
 
-        const triggerTransition = () => {
-          if (loaded) return;
-          loaded = true;
+        if (layoutType === 'split-v') {
+          const sr = lc.split_ratio != null ? lc.split_ratio : 50;
+          if (zoneA) zoneA.style.width = `${sr}%`;
+          if (zoneB) zoneB.style.width = `${100 - sr}%`;
+        }
 
-          // Cross-fade instantáneo / ultrarrápido
-          nextLayerEl.classList.add('active');
-          currentLayerEl.classList.remove('active');
+        if (layoutType === 'l-shape') {
+          const mr = lc.main_ratio   != null ? lc.main_ratio   : 70;
+          const br = lc.bottom_ratio != null ? lc.bottom_ratio : 20;
+          if (topRow) topRow.style.height = `${100 - br}%`;
+          if (zoneC)  zoneC.style.height  = `${br}%`;
+          if (zoneA)  zoneA.style.width   = `${mr}%`;
+          if (zoneB)  zoneB.style.width   = `${100 - mr}%`;
+        }
+      }
 
-          this.activeLayer = this.activeLayer === 'a' ? 'b' : 'a';
-          this.currentIndex = nextIndex;
-          this.mediaElement = el;
+      /**
+       * Crear los contenedores DOM de zonas según el layoutType.
+       * Sólo se recrea el DOM si el layoutType cambia.
+       */
+      function setupLayout(layoutType, lc) {
+        const newLCKey = JSON.stringify(lc || {});
 
-          // Si es video en loop nativo (lista de un solo elemento), detenemos transiciones adicionales
-          if (item.file_type.startsWith('video') && items.length === 1) {
+        if (currentLayout === layoutType && currentLCKey === newLCKey) return;
+
+        // Si sólo cambió el lc pero no el layout, sólo reaplica proporciones sin recrear DOM
+        if (currentLayout === layoutType && currentLCKey !== newLCKey) {
+          console.log(`[PLAYER] Actualizando proporciones de: ${layoutType}`);
+          applyLayoutConfig(layoutType, lc);
+          currentLCKey = newLCKey;
+          return;
+        }
+
+        console.log(`[PLAYER] Distribución cambiada a: ${layoutType}`);
+        Object.values(zonePlayers).forEach(p => p.stop());
+        zonePlayers = {};
+        playerContainer.innerHTML = '';
+        playerContainer.className = layoutType;
+
+        if (layoutType === 'single') {
+          const zoneA = document.createElement('div');
+          zoneA.id = 'zone-a'; zoneA.className = 'zone-container';
+          zoneA.style.width = '100%'; zoneA.style.height = '100%';
+          playerContainer.appendChild(zoneA);
+          zonePlayers['zone_a'] = new ZonePlayer('A', zoneA);
+        }
+        else if (layoutType === 'split-h') {
+          const zoneA = document.createElement('div');
+          zoneA.id = 'zone-a'; zoneA.className = 'zone-container';
+          const zoneB = document.createElement('div');
+          zoneB.id = 'zone-b'; zoneB.className = 'zone-container';
+          playerContainer.appendChild(zoneA);
+          playerContainer.appendChild(zoneB);
+          zonePlayers['zone_a'] = new ZonePlayer('A', zoneA);
+          zonePlayers['zone_b'] = new ZonePlayer('B', zoneB);
+        }
+        else if (layoutType === 'split-v') {
+          const zoneA = document.createElement('div');
+          zoneA.id = 'zone-a'; zoneA.className = 'zone-container';
+          const zoneB = document.createElement('div');
+          zoneB.id = 'zone-b'; zoneB.className = 'zone-container';
+          playerContainer.appendChild(zoneA);
+          playerContainer.appendChild(zoneB);
+          zonePlayers['zone_a'] = new ZonePlayer('A', zoneA);
+          zonePlayers['zone_b'] = new ZonePlayer('B', zoneB);
+        }
+        else if (layoutType === 'l-shape') {
+          const topRow = document.createElement('div');
+          topRow.className = 'top-row';
+          const zoneA = document.createElement('div');
+          zoneA.id = 'zone-a'; zoneA.className = 'zone-container';
+          const zoneB = document.createElement('div');
+          zoneB.id = 'zone-b'; zoneB.className = 'zone-container';
+          topRow.appendChild(zoneA); topRow.appendChild(zoneB);
+          const zoneC = document.createElement('div');
+          zoneC.id = 'zone-c'; zoneC.className = 'zone-container';
+          playerContainer.appendChild(topRow);
+          playerContainer.appendChild(zoneC);
+          zonePlayers['zone_a'] = new ZonePlayer('A', zoneA);
+          zonePlayers['zone_b'] = new ZonePlayer('B', zoneB);
+          zonePlayers['zone_c'] = new ZonePlayer('C', zoneC);
+        }
+
+        applyLayoutConfig(layoutType, lc);
+        currentLayout = layoutType;
+        currentLCKey  = newLCKey;
+      }
+
+      function stopAllPlayback() {
+        Object.values(zonePlayers).forEach(p => p.stop());
+        playerContainer.innerHTML = '';
+        currentLayout = null;
+        currentLCKey  = '';
+      }
+
+      // ── 🗓️ EVALUADOR DE PROGRAMACIONES HORARIAS ──────────────────
+
+      /**
+       * Dada la lista de schedules del backend, evalúa cuáles aplican
+       * en este momento (día y hora actuales) y devuelve un objeto con
+       * las playlists que deben sobreescribir las zonas.
+       *
+       * Formato schedule: { zone, playlist_id, start_time, end_time, days_of_week, playlist }
+       * days_of_week: 0=Lunes … 6=Domingo
+       *
+       * @param {Array}  schedules
+       * @param {object} defaultConfig  - { zone_a, zone_b, zone_c } con playlists por defecto
+       * @returns {object} - config con zonas resueltas
+       */
+      function resolveSchedules(schedules, defaultConfig) {
+        if (!schedules || schedules.length === 0) return defaultConfig;
+
+        const now      = new Date();
+        // getDay(): 0=Dom, 1=Lun … 6=Sáb  →  convertimos a 0=Lun … 6=Dom
+        const rawDay   = now.getDay();
+        const todayIdx = rawDay === 0 ? 6 : rawDay - 1;
+        const nowMins  = now.getHours() * 60 + now.getMinutes();
+
+        // Partimos de las playlists por defecto
+        const resolved = {
+          zone_a: defaultConfig.zone_a,
+          zone_b: defaultConfig.zone_b,
+          zone_c: defaultConfig.zone_c,
+        };
+
+        for (const s of schedules) {
+          if (!s.days_of_week || !s.days_of_week.includes(todayIdx)) continue;
+
+          const [sh, sm] = (s.start_time || '00:00:00').split(':').map(Number);
+          const [eh, em] = (s.end_time   || '00:00:00').split(':').map(Number);
+          const startMins = sh * 60 + sm;
+          const endMins   = eh * 60 + em;
+
+          let active = false;
+          if (startMins <= endMins) {
+            // Rango normal: 08:00 – 20:00
+            active = nowMins >= startMins && nowMins < endMins;
+          } else {
+            // Rango cruzado medianoche: 22:00 – 06:00
+            active = nowMins >= startMins || nowMins < endMins;
+          }
+
+          if (active && s.playlist) {
+            console.log(`[SCHEDULE] Zona ${s.zone}: aplicando "${s.playlist.name}" (${s.start_time} – ${s.end_time})`);
+            resolved[s.zone] = s.playlist;
+          }
+        }
+
+        return resolved;
+      }
+
+      // ── 🔄 OBTENER ESTADO ─────────────────────────────────────────
+      async function checkState() {
+        try {
+          let state  = { is_paired: false, pairing_code: '', serial_number: '' };
+          let config = {
+            layout: 'single',
+            layout_config: null,
+            schedules: [],
+            zone_a: { items: [] },
+            zone_b: { items: [] },
+            zone_c: { items: [] }
+          };
+
+          if (IS_LOCAL_MODE) {
+            const response = await fetch('/api/local/state');
+            state  = await response.json();
+            config = state.playlist || config;
+          } else {
+            state.serial_number = DEVICE_SERIAL;
+
+            try {
+              const hbRes = await fetch(`${CLOUD_BACKEND_URL}/devices/${DEVICE_SERIAL}/heartbeat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ip_address: 'smart-tv', storage_used_gb: 0, status: 'online' })
+              });
+              if (hbRes.ok) {
+                const hbData = await hbRes.json();
+                state.is_paired = hbData.is_paired;
+                if (!state.is_paired) throw new Error('Device not paired yet');
+              } else {
+                throw new Error('Heartbeat failed');
+              }
+            } catch (e) {
+              try {
+                const pairRes = await fetch(`${CLOUD_BACKEND_URL}/devices/request-pairing`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ serial_number: DEVICE_SERIAL })
+                });
+                const pairData = await pairRes.json();
+                state.is_paired    = pairData.is_paired;
+                state.pairing_code = pairData.pairing_code;
+              } catch(err) { console.error('Error solicitando pairing:', err); }
+            }
+
+            if (state.is_paired) {
+              try {
+                const plRes = await fetch(`${CLOUD_BACKEND_URL}/devices/${DEVICE_SERIAL}/playlist`);
+                if (plRes.ok) config = await plRes.json();
+              } catch(err) { console.error('Error obteniendo playlist:', err); }
+            }
+          }
+
+          // ── No emparejado ──────────────────────────────────────────
+          if (!state.is_paired) {
+            if (isPaired) {
+              console.log('[FACTORY RESET] Desvinculado. Limpiando almacenamiento...');
+              if (IS_CAPACITOR) {
+                try {
+                  const { Filesystem } = window.Capacitor.Plugins;
+                  const res = await Filesystem.readdir({ path: 'admesh/media', directory: 'DATA' }).catch(() => ({ files: [] }));
+                  for (const file of res.files) {
+                    await Filesystem.deleteFile({ path: `admesh/media/${file.name}`, directory: 'DATA' });
+                  }
+                } catch (err) { console.error('[FACTORY RESET] Error nativo:', err); }
+              } else {
+                try { await caches.delete('admesh-media-cache'); } catch (e) {}
+              }
+            }
+            isPaired = false;
+            stopAllPlayback();
+
+            const hasCode = state.pairing_code && state.pairing_code !== '------' && state.pairing_code !== '';
+            if (!hasCode) {
+              document.getElementById('offline-screen').classList.add('visible');
+              pairingScreen.classList.remove('visible');
+              standbyScreen.classList.remove('visible');
+            } else {
+              document.getElementById('offline-screen').classList.remove('visible');
+              pairingScreen.classList.add('visible');
+              standbyScreen.classList.remove('visible');
+              pairingCodeEl.textContent  = state.pairing_code;
+              serialNumberEl.textContent = state.serial_number || '...';
+
+              const qrTargetUrl = `https://app.ad-mesh.com/devices?code=${state.pairing_code}`;
+              const qrApiUrl    = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&color=00f0ff&bgcolor=15162c&data=${encodeURIComponent(qrTargetUrl)}`;
+              const qrImg = document.getElementById('pairing-qr');
+              if (qrImg && qrImg.getAttribute('data-code') !== state.pairing_code) {
+                qrImg.src = qrApiUrl;
+                qrImg.setAttribute('data-code', state.pairing_code);
+              }
+            }
             return;
           }
 
-          let duration = (item.duration_seconds || 10) * 1000;
-          
-          if (item.file_type.startsWith('video')) {
-            el.onended = () => {
-              this.playNext();
+          // ── Emparejado ────────────────────────────────────────────
+          document.getElementById('offline-screen').classList.remove('visible');
+          pairingScreen.classList.remove('visible');
+          isPaired = true;
+
+          const layoutType = config.layout || 'single';
+          const layoutCfg  = config.layout_config || null;
+
+          // Aplicar programaciones horarias sobre las playlists por defecto
+          const resolvedZones = resolveSchedules(config.schedules || [], {
+            zone_a: config.zone_a || { items: [] },
+            zone_b: config.zone_b || { items: [] },
+            zone_c: config.zone_c || { items: [] },
+          });
+
+          const hasItems = (resolvedZones.zone_a?.items?.length > 0) ||
+                           (resolvedZones.zone_b?.items?.length > 0) ||
+                           (resolvedZones.zone_c?.items?.length > 0);
+
+          if (!hasItems) {
+            standbyScreen.classList.add('visible');
+            stopAllPlayback();
+            return;
+          }
+
+          standbyScreen.classList.remove('visible');
+
+          // Crear/actualizar layout DOM con proporciones personalizadas
+          setupLayout(layoutType, layoutCfg);
+
+          // Asignar playlists resueltas a cada zona activa
+          if (zonePlayers['zone_a']) zonePlayers['zone_a'].setPlaylist(resolvedZones.zone_a || { items: [] });
+          if (zonePlayers['zone_b']) zonePlayers['zone_b'].setPlaylist(resolvedZones.zone_b || { items: [] });
+          if (zonePlayers['zone_c']) zonePlayers['zone_c'].setPlaylist(resolvedZones.zone_c || { items: [] });
+
+          // Limpieza de archivos huérfanos (Capacitor)
+          if (IS_CAPACITOR && hasItems) {
+            const allowedFiles = [];
+            const extractFiles = (zone) => {
+              if (zone?.items) zone.items.forEach(item => {
+                if (item.file_path) allowedFiles.push(item.file_path.split('/').pop());
+              });
             };
-            // Fallback de seguridad por si el video se traba
-            this.timeout = setTimeout(() => this.playNext(), Math.max(duration, 45000));
-          } else {
-            this.timeout = setTimeout(() => this.playNext(), duration);
-          }
-        };
-
-        if (item.file_type.startsWith('video')) {
-          el = document.createElement('video');
-          el.autoplay = true;
-          el.muted = true;
-          el.playsInline = true;
-          
-          // OPTIMIZACIÓN DE LOOP NATIVO: Si la playlist de esta zona tiene UN SOLO video,
-          // usamos la propiedad "loop" nativa de HTML5 para evitar refrescar la capa.
-          if (items.length === 1) {
-            el.loop = true;
+            extractFiles(resolvedZones.zone_a);
+            extractFiles(resolvedZones.zone_b);
+            extractFiles(resolvedZones.zone_c);
+            cleanOrphanedFilesCapacitor(allowedFiles);
           }
 
-          el.style.width = '100%';
-          el.style.height = '100%';
-          el.style.objectFit = 'cover';
-          
-          el.oncanplaythrough = triggerTransition;
-          el.src = mediaUrl; // Set src AFTER event listener definition
-        } else {
-          el = document.createElement('img');
-          el.style.width = '100%';
-          el.style.height = '100%';
-          el.style.objectFit = 'cover';
-          
-          el.onload = triggerTransition;
-          el.src = mediaUrl; // Set src AFTER event listener definition
-        }
-
-        nextLayerEl.appendChild(el);
-
-        // Fallback robusto e incondicional si el archivo no dispara eventos o falla
-        setTimeout(() => {
-          triggerTransition();
-        }, 3000);
-      }
-    }
-
-    // --- 📐 CONFIGURADOR DINÁMICO DE DISEÑO MULTI-ZONA ---
-    function setupLayout(layoutType) {
-      if (currentLayout === layoutType) return;
-      console.log(`[PLAYER] Distribución de pantalla cambiada a: ${layoutType}`);
-
-      // Detener loops activos
-      Object.values(zonePlayers).forEach(player => player.stop());
-      zonePlayers = {};
-      
-      // Limpiar contenedor
-      playerContainer.innerHTML = '';
-      playerContainer.className = layoutType;
-
-      if (layoutType === 'single') {
-        const zoneA = document.createElement('div');
-        zoneA.id = 'zone-a';
-        zoneA.className = 'zone-container';
-        zoneA.style.width = '100%';
-        zoneA.style.height = '100%';
-        playerContainer.appendChild(zoneA);
-        
-        zonePlayers['zone_a'] = new ZonePlayer('A', zoneA);
-      } 
-      else if (layoutType === 'split-h') {
-        const zoneA = document.createElement('div');
-        zoneA.id = 'zone-a';
-        zoneA.className = 'zone-container';
-        
-        const zoneB = document.createElement('div');
-        zoneB.id = 'zone-b';
-        zoneB.className = 'zone-container';
-
-        playerContainer.appendChild(zoneA);
-        playerContainer.appendChild(zoneB);
-
-        zonePlayers['zone_a'] = new ZonePlayer('A', zoneA);
-        zonePlayers['zone_b'] = new ZonePlayer('B', zoneB);
-      } 
-      else if (layoutType === 'split-v') {
-        const zoneA = document.createElement('div');
-        zoneA.id = 'zone-a';
-        zoneA.className = 'zone-container';
-        
-        const zoneB = document.createElement('div');
-        zoneB.id = 'zone-b';
-        zoneB.className = 'zone-container';
-
-        playerContainer.appendChild(zoneA);
-        playerContainer.appendChild(zoneB);
-
-        zonePlayers['zone_a'] = new ZonePlayer('A', zoneA);
-        zonePlayers['zone_b'] = new ZonePlayer('B', zoneB);
-      } 
-      else if (layoutType === 'l-shape') {
-        const topRow = document.createElement('div');
-        topRow.className = 'top-row';
-        
-        const zoneA = document.createElement('div');
-        zoneA.id = 'zone-a';
-        zoneA.className = 'zone-container';
-        
-        const zoneB = document.createElement('div');
-        zoneB.id = 'zone-b';
-        zoneB.className = 'zone-container';
-
-        topRow.appendChild(zoneA);
-        topRow.appendChild(zoneB);
-
-        const zoneC = document.createElement('div');
-        zoneC.id = 'zone-c';
-        zoneC.className = 'zone-container';
-
-        playerContainer.appendChild(topRow);
-        playerContainer.appendChild(zoneC);
-
-        zonePlayers['zone_a'] = new ZonePlayer('A', zoneA);
-        zonePlayers['zone_b'] = new ZonePlayer('B', zoneB);
-        zonePlayers['zone_c'] = new ZonePlayer('C', zoneC);
-      }
-
-      currentLayout = layoutType;
-    }
-
-    function stopAllPlayback() {
-      Object.values(zonePlayers).forEach(p => p.stop());
-      playerContainer.innerHTML = '';
-      currentLayout = null;
-    }
-
-    // --- 🔄 OBTENER ESTADO (INTELIGENTE: LOCAL O CLOUD) ---
-    async function checkState() {
-      try {
-        let state = { is_paired: false, pairing_code: "", serial_number: "" };
-        let config = { layout: 'single', zone_a: {items:[]}, zone_b: {items:[]}, zone_c: {items:[]} };
-
-        if (IS_LOCAL_MODE) {
-          // MODO PC: Hablar con el Daemon local
-          const response = await fetch('/api/local/state');
-          state = await response.json();
-          config = state.playlist || config;
-        } else {
-          // MODO SMART TV: Hablar directo con el Backend en la nube
-          state.serial_number = DEVICE_SERIAL;
-          
-          try {
-            // Intentamos enviar heartbeat
-            const hbRes = await fetch(`${CLOUD_BACKEND_URL}/devices/${DEVICE_SERIAL}/heartbeat`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ ip_address: "smart-tv", storage_used_gb: 0, status: "online" })
-            });
-            if (hbRes.ok) {
-              const hbData = await hbRes.json();
-              state.is_paired = hbData.is_paired;
-              if (!state.is_paired) {
-                throw new Error("Device not paired yet");
-              }
-            } else {
-              throw new Error("Heartbeat failed");
-            }
-          } catch (e) {
-            // Si falla, pedimos código de emparejamiento
+          // ── 🔄 Verificar actualizaciones OTA ──────────────────────
+          if (IS_CAPACITOR) {
             try {
-              const pairRes = await fetch(`${CLOUD_BACKEND_URL}/devices/request-pairing`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ serial_number: DEVICE_SERIAL })
-              });
-              const pairData = await pairRes.json();
-              state.is_paired = pairData.is_paired;
-              state.pairing_code = pairData.pairing_code;
-            } catch(err) {
-              console.error("Error solicitando pairing:", err);
-            }
-          }
-
-          if (state.is_paired) {
-             try {
-               const playlistRes = await fetch(`${CLOUD_BACKEND_URL}/devices/${DEVICE_SERIAL}/playlist`);
-               if (playlistRes.ok) config = await playlistRes.json();
-             } catch(err) { console.error("Error obteniendo playlist:", err); }
-          }
-        }
-
-        // 1. Manejo del Emparejamiento y Modo Offline
-        if (!state.is_paired) {
-          if (isPaired) {
-            // ¡Ha sido desvinculado! Ejecutar limpieza a estado de fábrica
-            console.log("[FACTORY RESET] La pantalla ha sido desvinculada. Limpiando almacenamiento local...");
-            if (IS_CAPACITOR) {
-              try {
-                const { Filesystem } = window.Capacitor.Plugins;
-                try {
-                  const result = await Filesystem.readdir({
-                    path: 'admesh/media',
-                    directory: 'DATA'
-                  });
-                  for (const file of result.files) {
-                    await Filesystem.deleteFile({
-                      path: `admesh/media/${file.name}`,
-                      directory: 'DATA'
+              const manifestRes = await fetch('https://api.ad-mesh.com/static/player/manifest.json', { cache: 'no-store' });
+              if (manifestRes.ok) {
+                const manifest = await manifestRes.json();
+                const currentOtaVersionStr = localStorage.getItem('admesh_ota_version');
+                const currentOtaVersion = currentOtaVersionStr ? parseInt(currentOtaVersionStr) : CURRENT_VERSION;
+                if (manifest.version > currentOtaVersion && manifest.url) {
+                  console.log(`[OTA] Nueva versión ${manifest.version}. Descargando...`);
+                  const fileRes = await fetch(manifest.url, { cache: 'no-store' });
+                  if (fileRes.ok) {
+                    const htmlContent = await fileRes.text();
+                    const { Filesystem } = window.Capacitor.Plugins;
+                    await Filesystem.writeFile({
+                      path: 'admesh/ota/index.html',
+                      data: htmlContent,
+                      directory: 'DATA',
+                      recursive: true,
+                      encoding: 'utf8'
                     });
+                    localStorage.setItem('admesh_ota_version', manifest.version);
+                    console.log(`[OTA] Versión ${manifest.version} instalada. Reiniciando...`);
+                    location.reload();
                   }
-                  console.log("[FACTORY RESET] Medios eliminados con éxito.");
-                } catch (e) {}
-              } catch (err) {
-                console.error("[FACTORY RESET] Error en limpieza nativa:", err);
-              }
-            } else {
-              try {
-                await caches.delete('admesh-media-cache');
-                console.log("[FACTORY RESET] Caché web eliminada.");
-              } catch (e) {}
-            }
-          }
-          isPaired = false;
-          stopAllPlayback();
-          
-          const hasCode = state.pairing_code && state.pairing_code !== '------' && state.pairing_code !== '';
-          if (!hasCode) {
-            // MOSTRAR PANTALLA OFFLINE (SIN INTERNET)
-            document.getElementById('offline-screen').classList.add('visible');
-            pairingScreen.classList.remove('visible');
-            standbyScreen.classList.remove('visible');
-          } else {
-            // MOSTRAR PANTALLA DE EMPAREJAMIENTO (CON INTERNET)
-            document.getElementById('offline-screen').classList.remove('visible');
-            pairingScreen.classList.add('visible');
-            standbyScreen.classList.remove('visible');
-            pairingCodeEl.textContent = state.pairing_code;
-            serialNumberEl.textContent = state.serial_number || '...';
-            
-            // Generar y cargar código QR para emparejamiento automático en la app
-            const qrTargetUrl = `https://app.ad-mesh.com/devices?code=${state.pairing_code}`;
-            const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&color=00f0ff&bgcolor=15162c&data=${encodeURIComponent(qrTargetUrl)}`;
-            const qrImg = document.getElementById('pairing-qr');
-            if (qrImg && qrImg.getAttribute('data-code') !== state.pairing_code) {
-              qrImg.src = qrApiUrl;
-              qrImg.setAttribute('data-code', state.pairing_code);
-            }
-          }
-          return;
-        }
-
-        // Si ya está emparejado, ocultar todo lo que no sea el reproductor
-        document.getElementById('offline-screen').classList.remove('visible');
-        pairingScreen.classList.remove('visible');
-        isPaired = true;
-
-        // 2. Manejo de la Configuración Multi-Zona
-        const layoutType = config.layout || 'single';
-
-        const hasItems = (config.zone_a?.items?.length > 0) || 
-                         (config.zone_b?.items?.length > 0) || 
-                         (config.zone_c?.items?.length > 0);
-
-        if (!hasItems) {
-          standbyScreen.classList.add('visible');
-          stopAllPlayback();
-          return;
-        }
-
-        standbyScreen.classList.remove('visible');
-        setupLayout(layoutType);
-
-        // Actualizar las listas en cada zona activa
-        if (zonePlayers['zone_a']) zonePlayers['zone_a'].setPlaylist(config.zone_a || { items: [] });
-        if (zonePlayers['zone_b']) zonePlayers['zone_b'].setPlaylist(config.zone_b || { items: [] });
-        if (zonePlayers['zone_c']) zonePlayers['zone_c'].setPlaylist(config.zone_c || { items: [] });
-
-        if (IS_CAPACITOR && hasItems) {
-          const allowedFiles = [];
-          const extractFiles = (zone) => {
-            if (zone && zone.items) {
-              zone.items.forEach(item => {
-                if (item.file_path) {
-                  allowedFiles.push(item.file_path.split('/').pop());
-                }
-              });
-            }
-          };
-          extractFiles(config.zone_a);
-          extractFiles(config.zone_b);
-          extractFiles(config.zone_c);
-          cleanOrphanedFilesCapacitor(allowedFiles);
-        }
-
-        // 3. Verificar actualizaciones OTA
-        if (IS_CAPACITOR) {
-          try {
-            const manifestRes = await fetch('https://api.ad-mesh.com/static/player/manifest.json', { cache: "no-store" });
-            if (manifestRes.ok) {
-              const manifest = await manifestRes.json();
-              const currentOtaVersionStr = localStorage.getItem('admesh_ota_version');
-              const currentOtaVersion = currentOtaVersionStr ? parseInt(currentOtaVersionStr) : CURRENT_VERSION;
-              
-              if (manifest.version > currentOtaVersion && manifest.url) {
-                console.log(`[OTA] Nueva actualización detectada: versión ${manifest.version}. Descargando...`);
-                const fileRes = await fetch(manifest.url, { cache: "no-store" });
-                if (fileRes.ok) {
-                  const htmlContent = await fileRes.text();
-                  const { Filesystem } = window.Capacitor.Plugins;
-                  await Filesystem.writeFile({
-                    path: 'admesh/ota/index.html',
-                    data: htmlContent,
-                    directory: 'DATA',
-                    recursive: true,
-                    encoding: 'utf8'
-                  });
-                  localStorage.setItem('admesh_ota_version', manifest.version);
-                  console.log(`[OTA] Versión ${manifest.version} descargada con éxito. Reiniciando...`);
-                  location.reload();
                 }
               }
-            }
-          } catch (e) {
-            console.error("[OTA] Error en búsqueda de actualizaciones:", e);
+            } catch (e) { console.error('[OTA] Error en búsqueda:', e); }
           }
-        }
 
-      } catch (err) {
-        console.error("[PLAYER] Error conectando con el Daemon local:", err);
+        } catch (err) {
+          console.error('[PLAYER] Error en checkState:', err);
+        }
       }
-    }
 
-    // Inicializar serial de dispositivo y luego arrancar monitoreo
-    initializeDeviceSerial().then(() => {
-      // Monitorear estado cada 5 segundos
-      setInterval(checkState, 5000);
-      // Primera consulta inmediata
-      checkState();
-    });
+      // Arrancar
+      initializeDeviceSerial().then(() => {
+        setInterval(checkState, 5000);
+        checkState();
+      });
+
     } // Cierre de if (!otaLoading)
   </script>
 </body>

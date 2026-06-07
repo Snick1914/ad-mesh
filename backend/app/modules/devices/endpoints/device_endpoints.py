@@ -7,7 +7,7 @@ from app.models.user import User
 from app.modules.devices.schemas import (
     DeviceOut, DevicePairRequest, DevicePairResponse, 
     PairingCodeRequest, PairingCodeResponse, DeviceHeartbeat,
-    DeviceConfigUpdate
+    DeviceConfigUpdate, DeviceScheduleCreate, DeviceScheduleOut
 )
 from app.modules.devices.services.device_service import DeviceService
 
@@ -149,14 +149,30 @@ def get_device_playlist(
         if active_p:
             playlist_id = active_p.id
 
+    from app.modules.devices.models import DeviceSchedule
+    schedules = db.query(DeviceSchedule).filter(DeviceSchedule.device_id == device.id).all()
+    schedules_data = []
+    for s in schedules:
+        schedules_data.append({
+            "id": s.id,
+            "zone": s.zone,
+            "playlist_id": s.playlist_id,
+            "start_time": s.start_time.strftime("%H:%M:%S") if s.start_time else "00:00:00",
+            "end_time": s.end_time.strftime("%H:%M:%S") if s.end_time else "00:00:00",
+            "days_of_week": s.days_of_week,
+            "playlist": _serialize_playlist_helper(s.playlist_id, db)
+        })
+
     return {
         "serial_number": device.serial_number,
         "resolution": device.resolution,
         "layout": device.layout,
-        "playlist_id": playlist_id, # compatible con reproductores heredados de zona única
+        "layout_config": device.layout_config,
+        "playlist_id": playlist_id,
         "zone_a": _serialize_playlist_helper(playlist_id, db),
         "zone_b": _serialize_playlist_helper(device.playlist_b_id, db),
         "zone_c": _serialize_playlist_helper(device.playlist_c_id, db),
+        "schedules": schedules_data
     }
 
 @router.put("/{device_id}/config", response_model=DeviceOut)
@@ -175,6 +191,7 @@ def update_device_configuration(
         user_id=current_user.id,
         resolution=payload.resolution,
         layout=payload.layout,
+        layout_config=payload.layout_config,
         playlist_id=payload.playlist_id,
         playlist_b_id=payload.playlist_b_id,
         playlist_c_id=payload.playlist_c_id
@@ -206,4 +223,58 @@ def unpair_device(
             detail=message
         )
     return device
+
+@router.get("/{device_id}/schedules", response_model=List[DeviceScheduleOut])
+def get_device_schedules(
+    device_id: int,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    """
+    Obtener la programación horaria de listas de reproducción de un dispositivo.
+    """
+    service = DeviceService(db)
+    return service.get_schedules(device_id=device_id, user_id=current_user.id)
+
+@router.post("/{device_id}/schedules", response_model=DeviceScheduleOut)
+def create_device_schedule(
+    device_id: int,
+    payload: DeviceScheduleCreate,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    """
+    Crear una regla de programación horaria para una lista de reproducción en un dispositivo.
+    """
+    service = DeviceService(db)
+    schedule = service.create_schedule(
+        device_id=device_id,
+        user_id=current_user.id,
+        schedule_in=payload
+    )
+    if not schedule:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Error al crear la regla de programación. Verifica el dispositivo y permisos."
+        )
+    return schedule
+
+@router.delete("/schedules/{schedule_id}")
+def delete_device_schedule(
+    schedule_id: int,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    """
+    Eliminar una regla de programación horaria.
+    """
+    service = DeviceService(db)
+    success = service.delete_schedule(schedule_id=schedule_id, user_id=current_user.id)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Error al eliminar la programación o permisos insuficientes."
+        )
+    return {"status": "success", "message": "Programación eliminada con éxito."}
+
 

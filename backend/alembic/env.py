@@ -7,7 +7,7 @@ from alembic import context
 # Importar Base y Modelos
 from app.db.base_class import Base
 from app.models.user import User  # Importar todos los modelos aquí
-from app.modules.devices.models import Device
+from app.modules.devices.models import Device, DeviceSchedule
 from app.modules.media.models import Media
 from app.modules.playlists.models import Playlist, PlaylistItem
 

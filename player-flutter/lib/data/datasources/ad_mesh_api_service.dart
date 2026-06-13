@@ -129,14 +129,18 @@ class AdMeshApiService {
 
       final tempFile = File(tempPath);
 
-      // 2. Validate MD5 checksum of downloaded file
-      final checksumValid = await _verifyMD5(tempFile, expectedChecksum);
-      if (!checksumValid) {
-        // Delete invalid file
-        if (await tempFile.exists()) {
-          await tempFile.delete();
+      // 2. Validate MD5 checksum only if the backend provides a real 32-character hex hash
+      final isRealChecksum = RegExp(r'^[a-fA-F0-9]{32}$').hasMatch(expectedChecksum);
+      if (isRealChecksum) {
+        final checksumValid = await _verifyMD5(tempFile, expectedChecksum);
+        if (!checksumValid) {
+          if (await tempFile.exists()) {
+            await tempFile.delete();
+          }
+          throw Exception('MD5 checksum validation failed for $filename');
         }
-        throw Exception('MD5 checksum validation failed for $filename');
+      } else {
+        debugPrint('AdMeshApiService: No se proporcionó checksum para $filename, saltando validación.');
       }
 
       // 3. Rename temporary file to final path upon success

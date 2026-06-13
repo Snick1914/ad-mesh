@@ -11,6 +11,7 @@ class Media(Base):
     file_path = Column(String, nullable=False)
     file_type = Column(String, index=True, nullable=False)
     file_size_bytes = Column(BigInteger, nullable=False)
+    checksum_md5 = Column(String(32), nullable=True)  # MD5 hexdigest of the stored file
     created_at = Column(DateTime, default=datetime.datetime.utcnow, index=True)
     is_deleted = Column(Boolean, default=False, index=True)
     deleted_at = Column(DateTime, nullable=True)

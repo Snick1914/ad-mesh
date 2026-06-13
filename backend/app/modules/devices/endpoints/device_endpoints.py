@@ -144,6 +144,7 @@ def _serialize_playlist_helper(playlist_id: int | None, db: Session):
                 "name": item.media.name,
                 "file_path": item.media.file_path,
                 "file_type": item.media.file_type,
+                "checksum": item.media.checksum_md5 or "",
                 "position": item.position,
                 "duration_seconds": item.duration_seconds
             })

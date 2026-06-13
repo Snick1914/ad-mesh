@@ -1,6 +1,7 @@
 import os
 import uuid
 import shutil
+import hashlib
 import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -54,12 +55,17 @@ class MediaService:
         physical_path = os.path.join(target_dir, unique_filename)
         relative_web_path = f"static/media/{user.id}/{unique_filename}"
 
-        # 4. Guardar archivo en disco
+        # 4. Guardar archivo en disco y calcular MD5 al mismo tiempo
+        md5_hash = hashlib.md5()
         try:
             with open(physical_path, "wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
+                for chunk in iter(lambda: file.file.read(65536), b""):
+                    buffer.write(chunk)
+                    md5_hash.update(chunk)
         except Exception as e:
             return False, f"Error de escritura en el servidor: {str(e)}", None
+
+        checksum_md5 = md5_hash.hexdigest()
 
         # 5. Registro en Base de Datos
         media_item = Media(
@@ -67,6 +73,7 @@ class MediaService:
             file_path=relative_web_path,
             file_type=file.content_type or "application/octet-stream",
             file_size_bytes=file_size_bytes,
+            checksum_md5=checksum_md5,
             user_id=user.id
         )
         self.db.add(media_item)

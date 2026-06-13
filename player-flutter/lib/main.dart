@@ -263,9 +263,10 @@ class _AppCoordinatorState extends State<AppCoordinator> {
             final itemsList = List.from(zoneData['items']);
             for (var i = 0; i < itemsList.length; i++) {
               final item = itemsList[i];
-              final filePath = item['file_path'].toString();
+              final filePath = item['file_path'].toString().replaceAll(RegExp(r'^/+'), '');
               final fileName = filePath.split('/').last;
-              final fullUrl = '$backendBase/$filePath';
+              final base = backendBase.endsWith('/') ? backendBase.substring(0, backendBase.length - 1) : backendBase;
+              final fullUrl = '$base/$filePath';
               final localPath = '${mediaDir.path}/$fileName';
 
               newPlaylist.add(

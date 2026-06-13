@@ -39,11 +39,21 @@ export default function DashboardLayout() {
     navigate('/login');
   };
 
-  const navItems = [
-    { name: 'Dispositivos', path: '/devices', icon: MonitorPlay },
-    { name: 'Telemetría IoT', path: '/telemetry', icon: Cpu },
-    { name: 'Biblioteca', path: '/media', icon: Film },
-    { name: 'Playlists', path: '/playlists', icon: ListMusic },
+  const navSections = [
+    {
+      title: 'Publicidad y Anuncios',
+      items: [
+        { name: 'Biblioteca', path: '/media', icon: Film },
+        { name: 'Playlists', path: '/playlists', icon: ListMusic },
+      ],
+    },
+    {
+      title: 'Monitoreo y Telemetría',
+      items: [
+        { name: 'Dispositivos', path: '/devices', icon: MonitorPlay },
+        { name: 'Telemetría IoT', path: '/telemetry', icon: Cpu },
+      ],
+    },
   ];
 
   return (
@@ -67,22 +77,31 @@ export default function DashboardLayout() {
           </div>
         </div>
         
-        <nav className="flex-1 px-4 py-6 space-y-2">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium ${
-                  isActive
-                    ? 'bg-[#00F0FF]/10 text-[#00F0FF] border border-[#00F0FF]/20'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
-                }`
-              }
-            >
-              <item.icon className="w-5 h-5" />
-              {item.name}
-            </NavLink>
+        <nav className="flex-1 px-4 py-6 space-y-6">
+          {navSections.map((section) => (
+            <div key={section.title} className="space-y-2">
+              <h3 className="px-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                {section.title}
+              </h3>
+              <div className="space-y-1">
+                {section.items.map((item) => (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium ${
+                        isActive
+                          ? 'bg-[#00F0FF]/10 text-[#00F0FF] border border-[#00F0FF]/20'
+                          : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
+                      }`
+                    }
+                  >
+                    <item.icon className="w-5 h-5" />
+                    {item.name}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
 
@@ -130,23 +149,32 @@ export default function DashboardLayout() {
               </button>
             </div>
             
-            <nav className="flex-1 px-4 py-6 space-y-2">
-              {navItems.map((item) => (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium ${
-                      isActive
-                        ? 'bg-[#00F0FF]/10 text-[#00F0FF] border border-[#00F0FF]/20'
-                        : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
-                    }`
-                  }
-                >
-                  <item.icon className="w-5 h-5" />
-                  {item.name}
-                </NavLink>
+            <nav className="flex-1 px-4 py-6 space-y-6">
+              {navSections.map((section) => (
+                <div key={section.title} className="space-y-2">
+                  <h3 className="px-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                    {section.title}
+                  </h3>
+                  <div className="space-y-1">
+                    {section.items.map((item) => (
+                      <NavLink
+                        key={item.path}
+                        to={item.path}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className={({ isActive }) =>
+                          `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium ${
+                            isActive
+                              ? 'bg-[#00F0FF]/10 text-[#00F0FF] border border-[#00F0FF]/20'
+                              : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
+                          }`
+                        }
+                      >
+                        <item.icon className="w-5 h-5" />
+                        {item.name}
+                      </NavLink>
+                    ))}
+                  </div>
+                </div>
               ))}
             </nav>
             <div className="p-4 border-t border-white/5 space-y-2">

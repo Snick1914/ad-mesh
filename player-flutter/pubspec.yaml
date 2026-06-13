@@ -1,0 +1,69 @@
+name: ad_mesh_player
+description: "Offline-first Digital Signage hardware accelerated player client for ad-mesh."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Native Hardware Accelerated Video Playback (ExoPlayer on Android, gapless support)
+  media_kit: any
+  media_kit_video: any
+  media_kit_libs_video: any
+
+  # SVG Support for vector logos
+  flutter_svg: ^2.0.10
+
+  # HTTP client with download progress support
+  dio: ^5.4.3+1
+
+  # Database persistence (Using 16KB compatible fork for Android 15/16 compatibility)
+  isar: ^3.1.0+1
+  isar_flutter_libs: ^3.1.0+1
+
+  # Local paths and directory management
+  path_provider: ^2.1.3
+  path: ^1.9.0
+
+  # Direct dependencies to silence Kotlin Gradle Plugin (KGP) warnings
+  package_info_plus: ^10.1.0
+  wakelock_plus: ^1.6.1
+
+  # Helper for checksums (MD5 verification)
+  crypto: ^3.0.3
+
+  # UI Icons
+  cupertino_icons: ^1.0.6
+  android_id: ^0.5.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Launcher Icons generator
+  flutter_launcher_icons: ^0.13.1
+
+  # Code generation for Isar schemas
+  isar_generator: ^3.1.0+1
+  build_runner: ^2.4.9
+  flutter_lints: ^3.0.2
+
+flutter:
+  uses-material-design: true
+
+  # Declare assets folder
+  assets:
+    - assets/
+
+# Launcher icon settings (white background with black logo)
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: false
+  image_path: "assets/logo.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/logo.png"

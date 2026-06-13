@@ -59,13 +59,6 @@ void main() async {
     }
   }
 
-  // FastAPI API endpoint configuration pointing to public server
-  // FastAPI API endpoint configuration pointing to public server or local server in debug mode
-  final String backendUrl = kDebugMode
-      ? (Platform.isAndroid ? 'http://10.0.2.2:8001/api/v1' : 'http://localhost:8001/api/v1')
-      : 'https://api.ad-mesh.com/api/v1';
-  final apiService = AdMeshApiService(baseUrl: backendUrl);
-
   // Load or generate device config
   DeviceConfigModel? config;
   if (bootError == null) {
@@ -103,6 +96,15 @@ void main() async {
       bootError = 'Failed to load device configuration: $e';
     }
   }
+
+  // Determine active backend URL (custom URL from database, or default server api.ad-mesh.com)
+  const String defaultBackendUrl = 'https://api.ad-mesh.com/api/v1';
+
+  final String activeBackendUrl = (config != null && config.customBackendUrl != null && config.customBackendUrl!.isNotEmpty)
+      ? config.customBackendUrl!
+      : defaultBackendUrl;
+
+  final apiService = AdMeshApiService(baseUrl: activeBackendUrl);
 
   runApp(
     MaterialApp(

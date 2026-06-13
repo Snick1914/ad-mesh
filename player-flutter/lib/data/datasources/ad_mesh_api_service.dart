@@ -28,8 +28,6 @@ class AdMeshApiService {
     _dio.options.baseUrl = baseUrl;
   }
 
-  /// Verifies connectivity to the FastAPI server.
-  /// Catches exceptions internally to prevent app crashes.
   Future<bool> checkConnection() async {
     try {
       final response = await _dio.get('devices/', 
@@ -39,6 +37,13 @@ class AdMeshApiService {
         ),
       );
       return response.statusCode == 200;
+    } on DioException catch (e) {
+      debugPrint('AdMeshApiService: Health check request failed: $e');
+      if (e.response != null && (e.response!.statusCode == 401 || e.response!.statusCode == 403 || e.response!.statusCode == 404)) {
+        // If the server answered with an HTTP error like 401, 403 or 404, the server is ONLINE.
+        return true;
+      }
+      return false;
     } catch (e) {
       debugPrint('AdMeshApiService: Health check failed: $e');
       return false;

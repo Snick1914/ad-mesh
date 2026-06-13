@@ -86,83 +86,7 @@ class _PairingScreenState extends State<PairingScreen> {
     super.dispose();
   }
 
-  void _showServerConfigDialog() {
-    final textController = TextEditingController(text: widget.apiService.baseUrl);
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF15162C),
-          title: const Text(
-            'Configurar URL del Servidor',
-            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Ingresa la dirección base de la API del servidor backend (debe terminar en /api/v1):',
-                style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 12),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: textController,
-                style: const TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'monospace'),
-                decoration: const InputDecoration(
-                  hintText: 'https://example.com/api/v1',
-                  hintStyle: TextStyle(color: Color(0xFF4B5563)),
-                  enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Color(0xFF242645)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Color(0xFF00F0FF)),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar', style: TextStyle(color: Color(0xFF6B7280))),
-            ),
-            TextButton(
-              onPressed: () async {
-                final newUrl = textController.text.trim();
-                if (newUrl.isNotEmpty) {
-                  widget.apiService.updateBaseUrl(newUrl);
-                  
-                  // Save custom URL to local config
-                  try {
-                    final config = await widget.localDb.getDeviceConfig();
-                    if (config != null) {
-                      config.customBackendUrl = widget.apiService.baseUrl;
-                      await widget.localDb.saveDeviceConfig(config);
-                    }
-                  } catch (e) {
-                    debugPrint('Error saving custom backend URL: $e');
-                  }
-
-                  if (mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Servidor actualizado a: ${widget.apiService.baseUrl}'),
-                        backgroundColor: const Color(0xFF00F0FF).withOpacity(0.2),
-                      ),
-                    );
-                  }
-                }
-              },
-              child: const Text('Guardar', style: TextStyle(color: Color(0xFF00F0FF))),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -301,25 +225,13 @@ class _PairingScreenState extends State<PairingScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Serie: ${widget.serialNumber}',
-              style: const TextStyle(
-                color: Color(0xFF4B5563),
-                fontSize: 11,
-                fontFamily: 'monospace',
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.settings, color: Color(0xFF4B5563), size: 16),
-              tooltip: 'Configurar Servidor',
-              constraints: const BoxConstraints(),
-              padding: EdgeInsets.zero,
-              onPressed: _showServerConfigDialog,
-            ),
-          ],
+        Text(
+          'Serie: ${widget.serialNumber}',
+          style: const TextStyle(
+            color: Color(0xFF4B5563),
+            fontSize: 11,
+            fontFamily: 'monospace',
+          ),
         ),
       ],
     );

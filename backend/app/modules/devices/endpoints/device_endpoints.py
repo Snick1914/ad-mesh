@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -12,6 +12,42 @@ from app.modules.devices.schemas import (
 from app.modules.devices.services.device_service import DeviceService
 
 router = APIRouter()
+
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: dict[str, WebSocket] = {}
+
+    async def connect(self, serial_number: str, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections[serial_number] = websocket
+
+    def disconnect(self, serial_number: str):
+        if serial_number in self.active_connections:
+            del self.active_connections[serial_number]
+
+    async def send_personal_message(self, message: dict, serial_number: str):
+        if serial_number in self.active_connections:
+            websocket = self.active_connections[serial_number]
+            try:
+                await websocket.send_json(message)
+            except Exception as e:
+                print(f"Error sending WebSocket message to {serial_number}: {e}")
+                self.disconnect(serial_number)
+
+manager = ConnectionManager()
+
+@router.websocket("/ws/{serial_number}")
+async def websocket_endpoint(websocket: WebSocket, serial_number: str):
+    await manager.connect(serial_number, websocket)
+    print(f"WebSocket: Pantalla conectada: {serial_number}")
+    try:
+        while True:
+            # Mantener conexión activa y recibir respuestas ping/pong del cliente si existieran
+            data = await websocket.receive_text()
+            await websocket.send_json({"event": "pong"})
+    except WebSocketDisconnect:
+        manager.disconnect(serial_number)
+        print(f"WebSocket: Pantalla desconectada: {serial_number}")
 
 @router.get("/", response_model=List[DeviceOut])
 def list_devices(
@@ -176,7 +212,7 @@ def get_device_playlist(
     }
 
 @router.put("/{device_id}/config", response_model=DeviceOut)
-def update_device_configuration(
+async def update_device_configuration(
     device_id: int,
     payload: DeviceConfigUpdate,
     db: Session = Depends(deps.get_db),
@@ -201,10 +237,11 @@ def update_device_configuration(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=message
         )
+    await manager.send_personal_message({"event": "sync_playlist"}, device.serial_number)
     return device
 
 @router.delete("/{device_id}/unpair", response_model=DeviceOut)
-def unpair_device(
+async def unpair_device(
     device_id: int,
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user)
@@ -222,6 +259,7 @@ def unpair_device(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=message
         )
+    await manager.send_personal_message({"event": "unpair"}, device.serial_number)
     return device
 
 @router.get("/{device_id}/schedules", response_model=List[DeviceScheduleOut])

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'package:android_id/android_id.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -167,7 +168,11 @@ class _AppCoordinatorState extends State<AppCoordinator> {
   bool _isLoading = true;
   String _pairingCode = '';
   List<PlaylistItemModel> _playlist = [];
-  Timer? _heartbeatTimer;
+  
+  WebSocketChannel? _wsChannel;
+  bool _isConnectingWs = false;
+  Timer? _wsReconnectTimer;
+  Timer? _wsPingTimer;
 
   @override
   void initState() {
@@ -178,7 +183,9 @@ class _AppCoordinatorState extends State<AppCoordinator> {
 
   @override
   void dispose() {
-    _heartbeatTimer?.cancel();
+    _wsChannel?.sink.close();
+    _wsReconnectTimer?.cancel();
+    _wsPingTimer?.cancel();
     super.dispose();
   }
 
@@ -199,7 +206,7 @@ class _AppCoordinatorState extends State<AppCoordinator> {
             _currentConfig.isPaired = true;
             _currentConfig.pairingCode = '';
             await widget.localDb.saveDeviceConfig(_currentConfig);
-            _startHeartbeatLoop();
+            _connectWebSocket();
             await _syncPlaylistAndPlay(isOnline);
           } else {
             setState(() {
@@ -216,13 +223,13 @@ class _AppCoordinatorState extends State<AppCoordinator> {
         }
       } else {
         // Already paired
-        _startHeartbeatLoop();
+        _connectWebSocket();
         await _syncPlaylistAndPlay(isOnline);
       }
     } catch (e) {
       debugPrint('AppCoordinator: Boot error: $e');
       if (_currentConfig.isPaired) {
-        _startHeartbeatLoop();
+        _connectWebSocket();
       }
       await _loadCachedPlaylist();
     }
@@ -315,41 +322,93 @@ class _AppCoordinatorState extends State<AppCoordinator> {
     });
   }
 
-  void _startHeartbeatLoop() {
-    _heartbeatTimer?.cancel();
-    _sendHeartbeat();
-    _heartbeatTimer = Timer.periodic(const Duration(seconds: 15), (_) => _sendHeartbeat());
-  }
+  void _connectWebSocket() {
+    if (_isConnectingWs || !_currentConfig.isPaired) return;
+    _isConnectingWs = true;
+    _wsReconnectTimer?.cancel();
 
-  Future<void> _sendHeartbeat() async {
-    debugPrint('AppCoordinator: Enviando latido (heartbeat)...');
+    final httpUrl = widget.apiService.baseUrl;
+    final wsScheme = httpUrl.startsWith('https://') ? 'wss://' : 'ws://';
+    final wsBase = httpUrl.replaceFirst(RegExp(r'https?://'), wsScheme);
+    final wsUrl = '${wsBase.endsWith('/') ? wsBase : '$wsBase/'}devices/ws/${_currentConfig.serialNumber}';
+
+    debugPrint('AppCoordinator: Conectando a WebSocket: $wsUrl');
     try {
-      final response = await widget.apiService.sendHeartbeat(
-        serialNumber: _currentConfig.serialNumber,
-        ipAddress: '127.0.0.1',
-        storageUsedGb: 0.5,
+      _wsChannel = WebSocketChannel.connect(Uri.parse(wsUrl));
+      
+      _wsChannel!.stream.listen(
+        (message) {
+          debugPrint('AppCoordinator: Mensaje WebSocket recibido: $message');
+          try {
+            final data = jsonDecode(message.toString());
+            final event = data['event']?.toString();
+
+            if (event == 'unpair') {
+              debugPrint('AppCoordinator: Señal de desvinculación recibida vía WebSocket!');
+              _handleUnpairEvent();
+            } else if (event == 'sync_playlist') {
+              debugPrint('AppCoordinator: Señal de sincronización de playlist recibida vía WebSocket!');
+              _syncPlaylistAndPlay(true);
+            }
+          } catch (e) {
+            debugPrint('AppCoordinator: Error decodificando mensaje WebSocket: $e');
+          }
+        },
+        onError: (error) {
+          debugPrint('AppCoordinator: Error en WebSocket: $error');
+          _wsChannel?.sink.close();
+          _scheduleWsReconnect();
+        },
+        onDone: () {
+          debugPrint('AppCoordinator: Conexión WebSocket cerrada');
+          _scheduleWsReconnect();
+        },
+        cancelOnError: true,
       );
 
-      final serverIsPaired = response['is_paired'] == true;
-      debugPrint('AppCoordinator: Latido respondido. Servidor emparejado = $serverIsPaired (Local = ${_currentConfig.isPaired})');
-
-      if (!serverIsPaired && _currentConfig.isPaired) {
-        debugPrint('AppCoordinator: El servidor indica que el dispositivo fue desvinculado. Restableciendo...');
-        _heartbeatTimer?.cancel();
-
-        _currentConfig.isPaired = false;
-        _currentConfig.pairingCode = '';
-        await widget.localDb.saveDeviceConfig(_currentConfig);
-
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-          _runBootSequence();
+      // Programar pings periódicos para mantener la conexión activa ante firewalls/routers
+      _wsPingTimer?.cancel();
+      _wsPingTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+        try {
+          _wsChannel?.sink.add('ping');
+        } catch (e) {
+          debugPrint('AppCoordinator: Fallo al enviar ping de WebSocket: $e');
         }
-      }
+      });
+
+      _isConnectingWs = false;
     } catch (e) {
-      debugPrint('AppCoordinator: Error de latido (Heartbeat): $e');
+      debugPrint('AppCoordinator: Error conectando a WebSocket: $e');
+      _isConnectingWs = false;
+      _scheduleWsReconnect();
+    }
+  }
+
+  void _scheduleWsReconnect() {
+    _wsReconnectTimer?.cancel();
+    _wsPingTimer?.cancel();
+    if (!_currentConfig.isPaired) return;
+    
+    debugPrint('AppCoordinator: Programando reconexión de WebSocket en 5 segundos...');
+    _wsReconnectTimer = Timer(const Duration(seconds: 5), () {
+      _connectWebSocket();
+    });
+  }
+
+  Future<void> _handleUnpairEvent() async {
+    _wsChannel?.sink.close();
+    _wsReconnectTimer?.cancel();
+    _wsPingTimer?.cancel();
+
+    _currentConfig.isPaired = false;
+    _currentConfig.pairingCode = '';
+    await widget.localDb.saveDeviceConfig(_currentConfig);
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+      _runBootSequence();
     }
   }
 

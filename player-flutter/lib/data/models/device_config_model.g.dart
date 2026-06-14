@@ -42,8 +42,13 @@ const DeviceConfigModelSchema = CollectionSchema(
       name: r'pairingCode',
       type: IsarType.string,
     ),
-    r'serialNumber': PropertySchema(
+    r'resolution': PropertySchema(
       id: 5,
+      name: r'resolution',
+      type: IsarType.string,
+    ),
+    r'serialNumber': PropertySchema(
+      id: 6,
       name: r'serialNumber',
       type: IsarType.string,
     )
@@ -77,6 +82,7 @@ int _deviceConfigModelEstimateSize(
   bytesCount += 3 + object.layout.length * 3;
   bytesCount += 3 + object.layoutConfigJson.length * 3;
   bytesCount += 3 + object.pairingCode.length * 3;
+  bytesCount += 3 + object.resolution.length * 3;
   bytesCount += 3 + object.serialNumber.length * 3;
   return bytesCount;
 }
@@ -92,7 +98,8 @@ void _deviceConfigModelSerialize(
   writer.writeString(offsets[2], object.layout);
   writer.writeString(offsets[3], object.layoutConfigJson);
   writer.writeString(offsets[4], object.pairingCode);
-  writer.writeString(offsets[5], object.serialNumber);
+  writer.writeString(offsets[5], object.resolution);
+  writer.writeString(offsets[6], object.serialNumber);
 }
 
 DeviceConfigModel _deviceConfigModelDeserialize(
@@ -108,7 +115,8 @@ DeviceConfigModel _deviceConfigModelDeserialize(
   object.layout = reader.readString(offsets[2]);
   object.layoutConfigJson = reader.readString(offsets[3]);
   object.pairingCode = reader.readString(offsets[4]);
-  object.serialNumber = reader.readString(offsets[5]);
+  object.resolution = reader.readString(offsets[5]);
+  object.serialNumber = reader.readString(offsets[6]);
   return object;
 }
 
@@ -130,6 +138,8 @@ P _deviceConfigModelDeserializeProp<P>(
     case 4:
       return (reader.readString(offset)) as P;
     case 5:
+      return (reader.readString(offset)) as P;
+    case 6:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -861,6 +871,142 @@ extension DeviceConfigModelQueryFilter
   }
 
   QueryBuilder<DeviceConfigModel, DeviceConfigModel, QAfterFilterCondition>
+      resolutionEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'resolution',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceConfigModel, DeviceConfigModel, QAfterFilterCondition>
+      resolutionGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'resolution',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceConfigModel, DeviceConfigModel, QAfterFilterCondition>
+      resolutionLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'resolution',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceConfigModel, DeviceConfigModel, QAfterFilterCondition>
+      resolutionBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'resolution',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceConfigModel, DeviceConfigModel, QAfterFilterCondition>
+      resolutionStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'resolution',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceConfigModel, DeviceConfigModel, QAfterFilterCondition>
+      resolutionEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'resolution',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceConfigModel, DeviceConfigModel, QAfterFilterCondition>
+      resolutionContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'resolution',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceConfigModel, DeviceConfigModel, QAfterFilterCondition>
+      resolutionMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'resolution',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceConfigModel, DeviceConfigModel, QAfterFilterCondition>
+      resolutionIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'resolution',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceConfigModel, DeviceConfigModel, QAfterFilterCondition>
+      resolutionIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'resolution',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceConfigModel, DeviceConfigModel, QAfterFilterCondition>
       serialNumberEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -1076,6 +1222,20 @@ extension DeviceConfigModelQuerySortBy
   }
 
   QueryBuilder<DeviceConfigModel, DeviceConfigModel, QAfterSortBy>
+      sortByResolution() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'resolution', Sort.asc);
+    });
+  }
+
+  QueryBuilder<DeviceConfigModel, DeviceConfigModel, QAfterSortBy>
+      sortByResolutionDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'resolution', Sort.desc);
+    });
+  }
+
+  QueryBuilder<DeviceConfigModel, DeviceConfigModel, QAfterSortBy>
       sortBySerialNumber() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'serialNumber', Sort.asc);
@@ -1176,6 +1336,20 @@ extension DeviceConfigModelQuerySortThenBy
   }
 
   QueryBuilder<DeviceConfigModel, DeviceConfigModel, QAfterSortBy>
+      thenByResolution() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'resolution', Sort.asc);
+    });
+  }
+
+  QueryBuilder<DeviceConfigModel, DeviceConfigModel, QAfterSortBy>
+      thenByResolutionDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'resolution', Sort.desc);
+    });
+  }
+
+  QueryBuilder<DeviceConfigModel, DeviceConfigModel, QAfterSortBy>
       thenBySerialNumber() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'serialNumber', Sort.asc);
@@ -1230,6 +1404,13 @@ extension DeviceConfigModelQueryWhereDistinct
   }
 
   QueryBuilder<DeviceConfigModel, DeviceConfigModel, QDistinct>
+      distinctByResolution({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'resolution', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<DeviceConfigModel, DeviceConfigModel, QDistinct>
       distinctBySerialNumber({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'serialNumber', caseSensitive: caseSensitive);
@@ -1275,6 +1456,13 @@ extension DeviceConfigModelQueryProperty
       pairingCodeProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'pairingCode');
+    });
+  }
+
+  QueryBuilder<DeviceConfigModel, String, QQueryOperations>
+      resolutionProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'resolution');
     });
   }
 

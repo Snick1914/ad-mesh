@@ -164,10 +164,13 @@ class AppCoordinator extends StatefulWidget {
 }
 
 class _AppCoordinatorState extends State<AppCoordinator> {
+  static const _deviceChannel = MethodChannel('com.admesh.player/device');
+
   late DeviceConfigModel _currentConfig;
   bool _isLoading = true;
   String _pairingCode = '';
   List<PlaylistItemModel> _playlist = [];
+  bool _isNovaStar = false;
   
   WebSocketChannel? _wsChannel;
   bool _isConnectingWs = false;
@@ -178,7 +181,24 @@ class _AppCoordinatorState extends State<AppCoordinator> {
   void initState() {
     super.initState();
     _currentConfig = widget.config;
+    _detectDeviceType();
     _runBootSequence();
+  }
+
+  Future<void> _detectDeviceType() async {
+    if (!kIsWeb && Platform.isAndroid) {
+      try {
+        final bool? isNova = await _deviceChannel.invokeMethod<bool>('isNovaStarDevice');
+        debugPrint('AppCoordinator: isNovaStarDevice = $isNova');
+        if (mounted) {
+          setState(() {
+            _isNovaStar = isNova ?? false;
+          });
+        }
+      } catch (e) {
+        debugPrint('Error checking NovaStar device: $e');
+      }
+    }
   }
 
   @override
@@ -193,7 +213,13 @@ class _AppCoordinatorState extends State<AppCoordinator> {
     setState(() => _isLoading = true);
 
     try {
-      final isOnline = await widget.apiService.checkConnection();
+      final isOnline = await widget.apiService.checkConnection().timeout(
+        const Duration(seconds: 4),
+        onTimeout: () {
+          debugPrint('AppCoordinator: checkConnection timed out, assuming offline');
+          return false;
+        },
+      );
 
       if (!_currentConfig.isPaired) {
         if (isOnline) {
@@ -250,9 +276,11 @@ class _AppCoordinatorState extends State<AppCoordinator> {
         final layout = playlistResponse['layout']?.toString() ?? 'single';
         final layoutConfigMap = playlistResponse['layout_config'] as Map<String, dynamic>? ?? {};
         final layoutConfigJson = jsonEncode(layoutConfigMap);
+        final resolution = playlistResponse['resolution']?.toString() ?? '1920x1080';
 
         _currentConfig.layout = layout;
         _currentConfig.layoutConfigJson = layoutConfigJson;
+        _currentConfig.resolution = resolution;
         await widget.localDb.saveDeviceConfig(_currentConfig);
 
         final List<PlaylistItemModel> newPlaylist = [];
@@ -433,19 +461,56 @@ class _AppCoordinatorState extends State<AppCoordinator> {
       );
     }
 
+    Widget mainContent;
     if (!_currentConfig.isPaired) {
-      return PairingScreen(
+      mainContent = PairingScreen(
         serialNumber: _currentConfig.serialNumber,
         initialPairingCode: _pairingCode,
         apiService: widget.apiService,
         localDb: widget.localDb,
         onPaired: _onDevicePairedSuccessfully,
       );
+    } else {
+      mainContent = PlayerScreen(
+        playlistItems: _playlist,
+        config: _currentConfig,
+        isNovaStar: _isNovaStar,
+      );
     }
 
-    return PlayerScreen(
-      playlistItems: _playlist,
-      config: _currentConfig,
-    );
+    if (_isNovaStar) {
+      double targetWidth = 160.0;
+      double targetHeight = 64.0;
+      
+      if (_currentConfig.isPaired) {
+        try {
+          final parts = _currentConfig.resolution.split('x');
+          if (parts.length == 2) {
+            final w = double.tryParse(parts[0]);
+            final h = double.tryParse(parts[1]);
+            if (w != null && h != null) {
+              targetWidth = w;
+              targetHeight = h;
+            }
+          }
+        } catch (e) {
+          debugPrint('Error parsing config resolution: $e');
+        }
+      }
+
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: targetWidth,
+            height: targetHeight,
+            child: mainContent,
+          ),
+        ),
+      );
+    }
+
+    return mainContent;
   }
 }

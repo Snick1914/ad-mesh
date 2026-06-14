@@ -12,11 +12,13 @@ import '../../data/models/playlist_item_model.dart';
 class PlayerScreen extends StatefulWidget {
   final List<PlaylistItemModel> playlistItems;
   final DeviceConfigModel config;
+  final bool isNovaStar;
 
   const PlayerScreen({
     super.key,
     required this.playlistItems,
     required this.config,
+    this.isNovaStar = false,
   });
 
   @override
@@ -54,7 +56,14 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
     if (widget.playlistItems.isEmpty) {
       return Scaffold(
         backgroundColor: const Color(0xFF0F101E),
-        body: _buildStandbyScreen(),
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth <= 200) {
+              return _buildMiniStandbyScreen();
+            }
+            return _buildStandbyScreen();
+          },
+        ),
       );
     }
 
@@ -144,6 +153,52 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
     );
   }
 
+  Widget _buildMiniStandbyScreen() {
+    return Container(
+      color: const Color(0xFF0F101E),
+      padding: const EdgeInsets.all(4.0),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const Text(
+              'ACTIVADA',
+              style: TextStyle(
+                color: Color(0xFF00F0FF),
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 2),
+            const Text(
+              'Esperando lista...',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 8,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            if (widget.isNovaStar) ...[
+              const SizedBox(height: 2),
+              const Text(
+                'LED NOVASTAR',
+                style: TextStyle(
+                  color: Color(0xFF6B7280),
+                  fontSize: 6,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   // Branded standby view matching the Docker player HTML/CSS design
   Widget _buildStandbyScreen() {
     return Container(
@@ -168,10 +223,12 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
           
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Center(
+            child: Align(
+              alignment: Alignment.topLeft,
               child: SingleChildScrollView(
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Pulsating Brand Logo
                     FadeTransition(
@@ -203,6 +260,26 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
                       ),
                       textAlign: TextAlign.center,
                     ),
+                    if (widget.isNovaStar) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF00F0FF).withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF00F0FF).withOpacity(0.5)),
+                        ),
+                        child: const Text(
+                          'MODO LED NOVASTAR ACTIVO',
+                          style: TextStyle(
+                            color: Color(0xFF00F0FF),
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 8),
                     
                     // Instructions Description

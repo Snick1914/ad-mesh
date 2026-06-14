@@ -835,27 +835,78 @@ export default function DevicesManager() {
                 )}
 
                 {/* Resolución */}
+                {/* Resolución */}
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-white flex items-center gap-1.5">
                     <Maximize className="w-4 h-4 text-gray-400" /> Resolución de Pantalla
                   </label>
                   <p className="text-xs text-gray-500">Ajusta la salida del puerto HDMI de la Raspberry Pi para adaptarla al televisor.</p>
-                  <select
-                    value={deviceConfig.resolution}
-                    onChange={(e) => setDeviceConfig({ ...deviceConfig, resolution: e.target.value })}
-                    className="w-full bg-[#0B0F19] border border-white/10 rounded-xl px-4 py-3 text-white font-medium focus:outline-none focus:ring-2 focus:ring-[#00F0FF] focus:border-transparent transition-all"
-                  >
-                    <optgroup label="Paisaje Horizontal (16:9)">
-                      <option value="1920x1080">1920 x 1080 (Full HD 1080p)</option>
-                      <option value="1280x720">1280 x 720 (HD Ready 720p)</option>
-                      <option value="3840x2160">3840 x 2160 (4K Ultra HD)</option>
-                    </optgroup>
-                    <optgroup label="Retrato Vertical (9:16 - Totems / Kioscos)">
-                      <option value="1080x1920">1080 x 1920 (Vertical Full HD)</option>
-                      <option value="720x1280">720 x 1280 (Vertical HD)</option>
-                      <option value="2160x3840">2160 x 3840 (Vertical 4K UHD)</option>
-                    </optgroup>
-                  </select>
+                  
+                  {(() => {
+                    const resolutionPresets = ['1920x1080', '1280x720', '3840x2160', '1080x1920', '720x1280', '2160x3840'];
+                    const isCustomResolution = !resolutionPresets.includes(deviceConfig.resolution);
+                    const [width, height] = deviceConfig.resolution.split('x');
+                    
+                    return (
+                      <>
+                        <select
+                          value={isCustomResolution ? "custom" : deviceConfig.resolution}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === 'custom') {
+                              setDeviceConfig({ ...deviceConfig, resolution: '1920x1080' });
+                            } else {
+                              setDeviceConfig({ ...deviceConfig, resolution: val });
+                            }
+                          }}
+                          className="w-full bg-[#0B0F19] border border-white/10 rounded-xl px-4 py-3 text-white font-medium focus:outline-none focus:ring-2 focus:ring-[#00F0FF] focus:border-transparent transition-all"
+                        >
+                          <optgroup label="Paisaje Horizontal (16:9)">
+                            <option value="1920x1080">1920 × 1080 (Full HD 1080p)</option>
+                            <option value="1280x720">1280 × 720 (HD Ready 720p)</option>
+                            <option value="3840x2160">3840 × 2160 (4K Ultra HD)</option>
+                          </optgroup>
+                          <optgroup label="Retrato Vertical (9:16 - Totems / Kioscos)">
+                            <option value="1080x1920">1080 × 1920 (Vertical Full HD)</option>
+                            <option value="720x1280">720 × 1280 (Vertical HD)</option>
+                            <option value="2160x3840">2160 × 3840 (Vertical 4K UHD)</option>
+                          </optgroup>
+                          <option value="custom">Personalizado (Manual)</option>
+                        </select>
+
+                        {isCustomResolution && (
+                          <div className="flex gap-4 pt-2">
+                            <div className="flex-1 space-y-1">
+                              <label className="text-xs text-gray-400">Ancho (px)</label>
+                              <input
+                                type="number"
+                                value={width || ''}
+                                onChange={(e) => {
+                                  const newWidth = e.target.value || '0';
+                                  setDeviceConfig({ ...deviceConfig, resolution: `${newWidth}x${height || '0'}` });
+                                }}
+                                className="w-full bg-[#0B0F19] border border-white/10 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#00F0FF]"
+                                placeholder="Ancho"
+                              />
+                            </div>
+                            <div className="flex-1 space-y-1">
+                              <label className="text-xs text-gray-400">Alto (px)</label>
+                              <input
+                                type="number"
+                                value={height || ''}
+                                onChange={(e) => {
+                                  const newHeight = e.target.value || '0';
+                                  setDeviceConfig({ ...deviceConfig, resolution: `${width || '0'}x${newHeight}` });
+                                }}
+                                className="w-full bg-[#0B0F19] border border-white/10 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-[#00F0FF]"
+                                placeholder="Alto"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
 
                 {/* Layouts Multi-Zona */}

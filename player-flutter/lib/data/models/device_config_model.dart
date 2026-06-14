@@ -12,6 +12,7 @@ class DeviceConfigModel {
   
   String layout = 'single';
   String layoutConfigJson = '{}';
+  String resolution = '1920x1080';
 
   String? customBackendUrl;
 }

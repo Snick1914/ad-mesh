@@ -99,7 +99,12 @@ class _PairingScreenState extends State<PairingScreen> {
           builder: (context, constraints) {
             final isLandscape = constraints.maxWidth > constraints.maxHeight;
 
-            return Center(
+            if (constraints.maxWidth <= 200) {
+              return _buildMiniLayout();
+            }
+
+            return Align(
+              alignment: Alignment.topLeft,
               child: Container(
                 constraints: BoxConstraints(
                   maxWidth: 850,
@@ -293,4 +298,49 @@ class _PairingScreenState extends State<PairingScreen> {
       ],
     );
   }
+
+  Widget _buildMiniLayout() {
+    return Container(
+      color: const Color(0xFF0F101E),
+      padding: const EdgeInsets.all(4.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const Text(
+            'CODIGO DE VINCULACION',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 8,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            _pairingCode.isEmpty ? '------' : _pairingCode,
+            style: const TextStyle(
+              color: Color(0xFF00F0FF),
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'monospace',
+              letterSpacing: 1,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'SERIE: ${widget.serialNumber}',
+            style: const TextStyle(
+              color: Color(0xFF6B7280),
+              fontSize: 6,
+              fontFamily: 'monospace',
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
 }
+

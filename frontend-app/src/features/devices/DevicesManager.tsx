@@ -845,7 +845,9 @@ export default function DevicesManager() {
                   {(() => {
                     const resolutionPresets = ['1920x1080', '1280x720', '3840x2160', '1080x1920', '720x1280', '2160x3840'];
                     const isCustomResolution = !resolutionPresets.includes(deviceConfig.resolution);
-                    const [width, height] = deviceConfig.resolution.split('x');
+                    const [width, height] = deviceConfig.resolution.includes('x')
+                      ? deviceConfig.resolution.split('x')
+                      : ['1920', '1080'];
                     
                     return (
                       <>
@@ -854,7 +856,7 @@ export default function DevicesManager() {
                           onChange={(e) => {
                             const val = e.target.value;
                             if (val === 'custom') {
-                              setDeviceConfig({ ...deviceConfig, resolution: '1920x1080' });
+                              setDeviceConfig({ ...deviceConfig, resolution: 'custom' });
                             } else {
                               setDeviceConfig({ ...deviceConfig, resolution: val });
                             }

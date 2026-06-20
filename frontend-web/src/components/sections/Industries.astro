@@ -1,0 +1,66 @@
+---
+const industries = [
+  {
+    title: "Retail & Supermercados",
+    description: "Pantallas publicitarias en vitrinas y refrigeradores de exhibición. Sincronización de ofertas en tiempo real y telemetría de apertura de puertas o proximidad para medir engagement.",
+    icon: `<svg class="w-6 h-6 text-mesh-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>`,
+    badge: "Alta Conversión"
+  },
+  {
+    title: "Clínicas & Hospitales",
+    description: "Monitoreo de la cadena de frío en refrigeradores médicos y conservación de vacunas. Pantallas informativas en salas de espera que muestran alertas críticas visuales si una temperatura se desvía.",
+    icon: `<svg class="w-6 h-6 text-mesh-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>`,
+    badge: "Grado Médico"
+  },
+  {
+    title: "Planta Industrial & Manufactura",
+    description: "Supervisión de consumos energéticos (kWh), presión de líneas neumáticas y temperatura de tableros eléctricos. Los operadores ven alertas y KPIs en pantallas gigantes en piso de producción.",
+    icon: `<svg class="w-6 h-6 text-mesh-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>`,
+    badge: "Monitoreo 24/7"
+  },
+  {
+    title: "Smart Cities & Infraestructura",
+    description: "Paradas de autobús, terminales y tótems informativos con sensores integrados de calidad de aire, CO2 y tráfico. Publicidad dirigida y mensajería civil de emergencia automatizada.",
+    icon: `<svg class="w-6 h-6 text-mesh-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>`,
+    badge: "Urbano & Vial"
+  }
+];
+---
+
+<section id="industries" class="py-24 bg-mesh-dark relative border-b border-white/5">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    
+    <div class="text-center max-w-3xl mx-auto mb-20 reveal-up">
+      <h2 class="text-mesh-accent font-semibold tracking-wide uppercase text-sm mb-3">Sectores de Impacto</h2>
+      <h3 class="text-3xl md:text-5xl font-bold text-white mb-6">Industrias que transformamos</h3>
+      <p class="text-lg text-mesh-muted leading-relaxed">
+        Ad-mesh es lo suficientemente versátil para interactuar en tiendas de retail y lo suficientemente robusto para operar en plantas industriales de misión crítica.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-12">
+      {industries.map((industry, index) => (
+        <div class={`group flex flex-col justify-between reveal-up delay-${(index % 2 + 1) * 150} pb-6 border-b border-white/5 hover:border-mesh-accent/30 transition-all`}>
+          <div>
+            <div class="flex justify-between items-center mb-6">
+              <div class="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center group-hover:scale-105 group-hover:bg-mesh-accent/10 group-hover:text-mesh-accent transition-all duration-300" set:html={industry.icon} />
+              <span class="text-[10px] font-bold text-mesh-accent uppercase tracking-widest font-mono">
+                {industry.badge}
+              </span>
+            </div>
+            
+            <h4 class="text-2xl font-bold text-white mb-3 group-hover:text-mesh-accent transition-colors">{industry.title}</h4>
+            <p class="text-mesh-muted leading-relaxed text-sm">{industry.description}</p>
+          </div>
+          
+          <div class="mt-6 flex items-center">
+            <a href="#contact" class="text-xs font-bold text-gray-400 group-hover:text-white transition-colors flex items-center gap-1.5">
+              Ver Demo para este Sector 
+              <svg class="w-3.5 h-3.5 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+            </a>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>

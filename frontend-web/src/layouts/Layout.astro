@@ -32,14 +32,51 @@ const { title, description = "ad-mesh: Redes de Señalización Digital y Telemet
     
     <title>{title}</title>
   </head>
-  <body class="bg-mesh-dark text-white font-sans antialiased selection:bg-mesh-accent selection:text-mesh-dark flex flex-col min-h-screen">
+  <body class="bg-mesh-dark text-white font-sans antialiased selection:bg-mesh-accent selection:text-mesh-dark flex flex-col min-h-screen relative overflow-x-hidden">
+    <!-- Interactive background mouse glow -->
+    <div id="mouse-glow-bg" class="fixed inset-0 pointer-events-none z-0 opacity-0 transition-opacity duration-700 hidden md:block"></div>
+
     <Header />
-    <main class="flex-grow pt-20">
+    <main class="flex-grow pt-20 relative z-10">
       <slot />
     </main>
     <Footer />
   </body>
 </html>
+
+<script>
+  // Mouse Follow Glow Effect
+  document.addEventListener('mousemove', (e) => {
+    const glow = document.getElementById('mouse-glow-bg');
+    if (glow) {
+      glow.style.setProperty('--mouse-x', `${e.clientX}px`);
+      glow.style.setProperty('--mouse-y', `${e.clientY}px`);
+      glow.style.opacity = '0.35';
+    }
+  });
+
+  // Intersection Observer for scroll-driven animations
+  const observerOptions = {
+    root: null,
+    rootMargin: '0px',
+    threshold: 0.1
+  };
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('active');
+        // Optional: stop observing once animated
+        // observer.unobserve(entry.target);
+      }
+    });
+  }, observerOptions);
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const animElements = document.querySelectorAll('.reveal-up, .reveal-fade, .reveal-scale');
+    animElements.forEach((el) => observer.observe(el));
+  });
+</script>
 
 <style is:global>
   :root {
@@ -48,6 +85,14 @@ const { title, description = "ad-mesh: Redes de Señalización Digital y Telemet
     --mesh-dark: #05070a;
     --mesh-card: #0c0f16;
     --mesh-muted: #94a3b8;
+  }
+
+  #mouse-glow-bg {
+    background: radial-gradient(
+      600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+      rgba(0, 240, 255, 0.08),
+      transparent 80%
+    );
   }
 
   /* Custom Scrollbar */
@@ -64,4 +109,40 @@ const { title, description = "ad-mesh: Redes de Señalización Digital y Telemet
   ::-webkit-scrollbar-thumb:hover {
     background: #334155;
   }
+
+  /* Scroll Reveal Animations */
+  .reveal-up {
+    opacity: 0;
+    transform: translateY(35px);
+    transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .reveal-up.active {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .reveal-fade {
+    opacity: 0;
+    transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .reveal-fade.active {
+    opacity: 1;
+  }
+
+  .reveal-scale {
+    opacity: 0;
+    transform: scale(0.95);
+    transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .reveal-scale.active {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* Delay utilities */
+  .delay-100 { transition-delay: 100ms; }
+  .delay-200 { transition-delay: 200ms; }
+  .delay-300 { transition-delay: 300ms; }
+  .delay-400 { transition-delay: 400ms; }
+  .delay-500 { transition-delay: 500ms; }
 </style>

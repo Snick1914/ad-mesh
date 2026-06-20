@@ -1,0 +1,127 @@
+---
+const specs = [
+  {
+    name: "Gabinete Industrial Fanless",
+    detail: "Cuerpo de aluminio extruido con aletas disipadoras térmicas. Cero ventiladores, cero partes móviles, protección total contra acumulación de polvo y grasa."
+  },
+  {
+    name: "Salida HDMI 4K UHD",
+    detail: "Salidas de video HDMI con soporte para reproducción fluida de anuncios y videos de alta definición 4K a 60 cuadros por segundo sin parpadeos."
+  },
+  {
+    name: "Puerto de Expansión de Sensores",
+    detail: "Entrada serie RJ45/USB para bus Modbus RTU, I2C, 1-Wire y entradas de relés digitales. Permite conexión de hasta 16 sensores simultáneos."
+  },
+  {
+    name: "Almacenamiento Seguro USB/SSD",
+    detail: "Almacenamiento interno de alta velocidad para caché de contenidos multimedia e historial local de sensores con sistema de archivos tolerante a fallas de energía."
+  },
+  {
+    name: "Auto-arranque (Watchdog)",
+    detail: "Encendido automático instantáneo al conectarse a la toma eléctrica. Watchdog de hardware que reinicia el equipo automáticamente ante congelamientos."
+  }
+];
+---
+
+<section id="hardware" class="py-24 bg-mesh-dark relative border-b border-white/5 overflow-hidden">
+  
+  <!-- Gradient background highlight -->
+  <div class="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-mesh-accent/5 blur-[100px] rounded-full pointer-events-none"></div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex flex-col lg:flex-row items-center gap-16">
+      
+      <!-- Left: Hardware Render representation (SVG / CSS Exploded View) -->
+      <div class="lg:w-1/2 w-full order-2 lg:order-1 reveal-scale">
+        <div class="relative bg-mesh-card border border-white/10 rounded-3xl p-8 shadow-2xl overflow-hidden group">
+          <!-- Metallic Fin Grid representation -->
+          <div class="absolute inset-0 bg-[radial-gradient(#ffffff03_1px,transparent_1px)] bg-[size:16px_16px]"></div>
+          
+          <div class="relative z-10 space-y-8">
+            <div class="flex justify-between items-center border-b border-white/5 pb-4">
+              <span class="text-xs text-mesh-accent font-bold uppercase tracking-wider font-mono">Especificaciones Físicas</span>
+              <span class="bg-white/5 text-[10px] text-white font-mono px-2 py-0.5 rounded border border-white/10">Modelo: AM-200-IND</span>
+            </div>
+
+            <!-- Player Block graphic -->
+            <div class="relative max-w-sm mx-auto my-6 bg-slate-900 border-2 border-slate-700 rounded-2xl p-6 shadow-[0_20px_50px_rgba(0,0,0,0.8)] group-hover:border-mesh-accent/50 transition-colors">
+              
+              <!-- Metal fins details on top -->
+              <div class="flex gap-1.5 justify-center mb-6">
+                <div class="w-2.5 h-16 bg-slate-800 rounded shadow-inner"></div>
+                <div class="w-2.5 h-16 bg-slate-800 rounded shadow-inner"></div>
+                <div class="w-2.5 h-16 bg-slate-800 rounded shadow-inner"></div>
+                <div class="w-2.5 h-16 bg-slate-800 rounded shadow-inner"></div>
+                <div class="w-2.5 h-16 bg-slate-800 rounded shadow-inner"></div>
+                <div class="w-2.5 h-16 bg-slate-800 rounded shadow-inner"></div>
+                <div class="w-2.5 h-16 bg-slate-800 rounded shadow-inner"></div>
+                <div class="w-2.5 h-16 bg-slate-800 rounded shadow-inner"></div>
+              </div>
+
+              <!-- Connection Ports visualization -->
+              <div class="flex justify-between items-end mt-4">
+                <!-- Port 1: HDMI -->
+                <div class="text-center">
+                  <div class="w-8 h-4 bg-slate-950 rounded border border-white/20 mx-auto flex items-center justify-center text-[7px] text-gray-400 font-mono">HDMI</div>
+                  <span class="text-[8px] text-gray-500 block mt-1">4K Out</span>
+                </div>
+                <!-- Port 2: USB/SSD -->
+                <div class="text-center">
+                  <div class="w-6 h-5 bg-slate-950 rounded border border-white/20 mx-auto flex flex-col justify-around p-0.5">
+                    <div class="h-[1px] bg-mesh-accent w-full"></div>
+                    <div class="h-[1px] bg-mesh-accent w-full"></div>
+                  </div>
+                  <span class="text-[8px] text-gray-500 block mt-1">USB / SSD</span>
+                </div>
+                <!-- Port 3: Sensor (RJ45/Modbus) -->
+                <div class="text-center">
+                  <div class="w-5 h-5 bg-slate-950 rounded border-2 border-blue-500 mx-auto flex items-center justify-center shadow-[0_0_8px_rgba(59,130,246,0.5)]">
+                    <div class="w-2 h-2 bg-blue-400 rounded-sm"></div>
+                  </div>
+                  <span class="text-[8px] text-blue-400 font-bold block mt-1">MODBUS</span>
+                </div>
+                <!-- Power LED indicators -->
+                <div class="flex flex-col items-center gap-1.5 pb-1">
+                  <div class="w-2 h-2 rounded-full bg-mesh-accent animate-pulse shadow-[0_0_6px_#00f0ff]"></div>
+                  <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                  <span class="text-[8px] text-gray-500">PWR</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Features Highlights -->
+            <div class="grid grid-cols-2 gap-4 text-xs font-mono pt-4 border-t border-white/5">
+              <div class="bg-white/5 p-3 rounded-lg">
+                <p class="text-gray-400 uppercase tracking-wider mb-1">Temperatura Operativa</p>
+                <p class="text-white font-bold">-20°C a 70°C</p>
+              </div>
+              <div class="bg-white/5 p-3 rounded-lg">
+                <p class="text-gray-400 uppercase tracking-wider mb-1">Alimentación</p>
+                <p class="text-white font-bold">12V DC (Bajo Consumo)</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Content & List of specs -->
+      <div class="lg:w-1/2 w-full order-1 lg:order-2 space-y-6 reveal-up delay-200">
+        <h2 class="text-mesh-accent font-semibold tracking-wide uppercase text-sm">Ingeniería Física</h2>
+        <h3 class="text-3xl md:text-5xl font-bold text-white leading-tight">Hardware diseñado para durar</h3>
+        <p class="text-lg text-mesh-muted leading-relaxed">
+          Nuestros players están construidos específicamente para resistir las condiciones más rudas del comercio y la industria. Olvídese de fallas y costosos envíos de soporte técnico.
+        </p>
+
+        <div class="space-y-6 pt-4">
+          {specs.map(spec => (
+            <div class="border-b border-white/10 pb-4">
+              <h4 class="text-white font-bold text-lg mb-1">{spec.name}</h4>
+              <p class="text-mesh-muted text-sm leading-relaxed">{spec.detail}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>

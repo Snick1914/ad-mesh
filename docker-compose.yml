@@ -7,13 +7,14 @@ services:
       - ad-mesh-network
       - proxy-network
 
-  app:
+  dashboard:
     image: ghcr.io/snick1914/ad-mesh-app:latest
     container_name: ad-mesh-app
     restart: unless-stopped
     networks:
       - ad-mesh-network
       - proxy-network
+
   api:
     image: ghcr.io/snick1914/ad-mesh-api:latest
     container_name: ad-mesh-api
@@ -27,7 +28,7 @@ services:
       - ./media:/app/static/media
 
   db:
-    image: postgres:16-alpine
+    image: docker.io/library/postgres:16-alpine
     container_name: ad-mesh-db
     environment:
       - POSTGRES_USER=${POSTGRES_USER}

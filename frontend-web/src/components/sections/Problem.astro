@@ -1,0 +1,91 @@
+---
+const problems = [
+  {
+    title: "Dependencia Absoluta de Internet",
+    traditional:
+      "Pantallas tradicionales se quedan en negro, congeladas o mostrando un logo de 'Sin Conexión' al primer microcorte de internet.",
+    admesh:
+      "Reproducción offline inteligente 100% autónoma. El contenido publicitario y las alertas locales se guardan en el disco físico y continúan operando sin interrupción.",
+    icon: `<svg class="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m0 0l2.829-2.83m-3.887-3.887a9 9 0 011.414-2.83M9 15.536L6.171 18.364m3.887-11.312a9 9 0 011.414-2.83m0 0l2.829 2.83" /></svg>`,
+  },
+  {
+    title: "Silos de Datos Separados",
+    traditional:
+      "Necesitas un proveedor de cartelería digital para las pantallas y otro sistema SCADA/telemetría costoso e incompatible para tus sensores.",
+    admesh:
+      "Plataforma unificada. La misma red de players reproduce tu marca y recopila telemetría de tus máquinas y espacios en una sola interfaz.",
+    icon: `<svg class="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>`,
+  },
+  {
+    title: "Hardware Frágil y Mantenimiento Caro",
+    traditional:
+      "Mini PCs comerciales propensas a fallas por sobrecalentamiento, polvo o actualizaciones automáticas de sistema operativo.",
+    admesh:
+      "Hardware de grado industrial fanless (sin partes móviles) optimizado para entornos hostiles, con arranque automático e inmunidad al polvo y calor.",
+    icon: `<svg class="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>`,
+  },
+];
+---
+
+<section
+  id="problem"
+  class="py-24 bg-mesh-dark relative border-b border-white/5"
+>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center max-w-3xl mx-auto mb-20 reveal-up">
+      <h2
+        class="text-mesh-accent font-semibold tracking-wide uppercase text-sm mb-3"
+      >
+        El Gran Desafío Operativo
+      </h2>
+      <h3 class="text-3xl md:text-5xl font-bold text-white mb-6">
+        ¿Por qué fallan las pantallas tradicionales?
+      </h3>
+      <p class="text-lg text-mesh-muted leading-relaxed">
+        Las redes de pantallas comerciales no están diseñadas para la realidad
+        industrial. Dependen de internet constante y hardware frágil, creando
+        dolores de cabeza técnicos y pérdidas comerciales.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-16">
+      {
+        problems.map((problem, index) => (
+          <div
+            class={`flex flex-col justify-between transition-all group reveal-up delay-${(index + 1) * 100}`}
+          >
+            <div>
+              <div
+                class="w-12 h-12 bg-red-500/10 rounded-xl flex items-center justify-center mb-6 group-hover:scale-105 transition-transform"
+                set:html={problem.icon}
+              />
+              <h4 class="text-2xl font-bold text-white mb-5">
+                {problem.title}
+              </h4>
+
+              <div class="space-y-6">
+                <div class="border-l border-red-500/30 pl-4 py-1">
+                  <p class="text-[18px] font-bold text-red-400/80 uppercase tracking-wider mb-1 font-mono">
+                    El Límite Tradicional
+                  </p>
+                  <p class="text-[14px] text-mesh-muted leading-relaxed">
+                    {problem.traditional}
+                  </p>
+                </div>
+
+                <div class="border-l-2 border-mesh-accent/50 pl-4 py-1 group-hover:border-mesh-accent transition-colors">
+                  <p class="text-[18px] font-bold text-mesh-accent uppercase tracking-wider mb-1 font-mono">
+                    La Respuesta ad-mesh
+                  </p>
+                  <p class="text-[14px] text-white leading-relaxed font-medium">
+                    {problem.admesh}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</section>

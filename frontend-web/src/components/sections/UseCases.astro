@@ -1,0 +1,157 @@
+---
+const cases = [
+  {
+    app: "ad-mesh Signage",
+    badge: "Aplicación de Señalización",
+    title: "Señalización en Punto de Venta",
+    description: "Despliegue centralizado de menús, promociones y catálogos interactivos en tiendas de retail y restaurantes.",
+    details: [
+      "Las pantallas reproducen contenido 4K de forma fluida y offline.",
+      "El equipo de mercadotecnia programa campañas desde la consola Signage.",
+      "Cero interrupciones: el contenido se cachea localmente en el player.",
+      "Mide tiempos de reproducción e impresiones publicitarias por pantalla."
+    ],
+    visualType: "signage"
+  },
+  {
+    app: "ad-mesh Telemetry",
+    badge: "Aplicación de Telemetría",
+    title: "Cadena de Frío Farmacéutica",
+    description: "Monitoreo riguroso de temperatura y humedad en refrigeradores médicos y vacunas sensibles (Inspirado en Sensify).",
+    details: [
+      "Los sensores miden constantemente la temperatura interna (ej. 4.2°C).",
+      "Si la temperatura sale del rango seguro, se detonan alertas inmediatas.",
+      "Notificaciones push a WhatsApp, SMS y correo a los técnicos de guardia.",
+      "Genera reportes de trazabilidad para cumplimiento FDA y COFEPRIS."
+    ],
+    visualType: "telemetry-cold"
+  },
+  {
+    app: "ad-mesh Telemetry",
+    badge: "Aplicación de Telemetría",
+    title: "Eficiencia Energética en Plantas",
+    description: "Monitoreo de consumo de kWh y ciclos de trabajo de motores/compresores en tableros eléctricos principales.",
+    details: [
+      "Sensores de corriente no invasivos miden carga de energía real.",
+      "Identifica picos inusuales para prevenir multas de demanda máxima.",
+      "Permite programar mantenimiento preventivo analizando fatiga del motor.",
+      "Monitorea la salud eléctrica de los equipos 24/7 en tiempo real."
+    ],
+    visualType: "telemetry-energy"
+  }
+];
+---
+
+<section id="use-cases" class="py-24 bg-[#0a0d14] relative border-b border-white/5">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    
+    <div class="text-center max-w-3xl mx-auto mb-20 reveal-up">
+      <h2 class="text-mesh-accent font-semibold tracking-wide uppercase text-sm mb-3">Casos de Uso Reales</h2>
+      <h3 class="text-3xl md:text-5xl font-bold text-white mb-6">Aplicaciones en el mundo real</h3>
+      <p class="text-lg text-mesh-muted leading-relaxed">
+        Aunque conviven en el mismo hardware player, ad-mesh separa las aplicaciones para mantener el enfoque de cada equipo de trabajo.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
+      {cases.map((item, index) => (
+        <div class={`flex flex-col justify-between group reveal-up delay-${(index + 1) * 150} pb-8 lg:pb-0 border-b lg:border-b-0 lg:border-r border-white/5 last:border-0 lg:pr-10 last:pr-0`}>
+          <div>
+            <div class="flex justify-between items-center mb-6">
+              <span class="text-[10px] font-bold font-mono text-mesh-accent uppercase tracking-wider">
+                {item.app}
+              </span>
+              <span class="text-[9px] text-gray-500 font-mono uppercase tracking-wider">
+                {item.badge}
+              </span>
+            </div>
+            
+            <h4 class="text-2xl font-bold text-white mb-3 group-hover:text-mesh-accent transition-colors">{item.title}</h4>
+            <p class="text-mesh-muted text-sm leading-relaxed mb-6">{item.description}</p>
+            
+            <!-- Graphic Representation -->
+            <div class="bg-slate-950/80 rounded-2xl p-4 border border-white/5 mb-6 aspect-video flex items-center justify-center relative overflow-hidden">
+              {item.visualType === "signage" && (
+                <div class="w-full h-full flex flex-col justify-between p-1.5">
+                  <div class="border-2 border-slate-700 rounded-lg p-2 bg-slate-900 flex flex-col justify-between h-full">
+                    <div class="flex justify-between items-center text-[8px] text-gray-500">
+                      <span>Ubicación: Pasillo Central</span>
+                      <span class="text-mesh-accent font-bold">Signage App</span>
+                    </div>
+                    <!-- Display playlist items -->
+                    <div class="bg-gradient-to-r from-blue-900 to-indigo-900 p-2 rounded text-center text-[9px] text-white font-bold my-1 border border-mesh-accent/20 flex items-center justify-center gap-1.5">
+                      <svg class="w-3.5 h-3.5 text-mesh-accent shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                      </svg>
+                      <span>PLAYLIST: PROMO_VERANO_Q2</span>
+                    </div>
+                    <div class="flex justify-between items-center text-[8px] text-gray-500">
+                      <span>Player Offline Mode: OK</span>
+                      <span>Sincronizado: 100%</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {item.visualType === "telemetry-cold" && (
+                <div class="w-full h-full flex flex-col justify-between p-1.5">
+                  <div class="border-2 border-slate-700 rounded-lg p-2 bg-slate-900 flex flex-col justify-between h-full">
+                    <div class="flex justify-between items-center text-[8px] text-gray-500">
+                      <span>Nevera de Vacunas</span>
+                      <span class="text-blue-400 font-bold">Telemetry App</span>
+                    </div>
+                    <!-- Temperature display -->
+                    <div class="text-center my-1">
+                      <p class="text-2xl font-black text-white font-mono">4.2 °C</p>
+                      <p class="text-[8px] text-green-400 font-bold">● RANGO SEGURO (FDA)</p>
+                    </div>
+                    <div class="bg-white/5 border border-white/10 text-[8px] text-gray-400 rounded p-1 text-center font-mono leading-none">
+                      Alertas: SMS & WhatsApp Activas
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {item.visualType === "telemetry-energy" && (
+                <div class="w-full h-full flex flex-col justify-between p-1.5">
+                  <div class="border-2 border-slate-700 rounded-lg p-2 bg-slate-900 flex flex-col justify-between h-full">
+                    <div class="flex justify-between items-center text-[8px] text-gray-500">
+                      <span>Compresor Tablero 1</span>
+                      <span class="text-yellow-400 font-bold">Telemetry App</span>
+                    </div>
+                    <div class="flex justify-around items-center my-1.5">
+                      <div class="text-center">
+                        <span class="text-base font-bold text-white">124 kW</span>
+                        <span class="text-[7px] text-gray-500 block">Consumo</span>
+                      </div>
+                      <div class="w-px h-5 bg-slate-700"></div>
+                      <div class="text-center">
+                        <span class="text-base font-bold text-yellow-400">92%</span>
+                        <span class="text-[7px] text-gray-500 block">Eficiencia</span>
+                      </div>
+                    </div>
+                    <div class="w-full bg-slate-800 h-1 rounded-full overflow-hidden">
+                      <div class="bg-yellow-400 h-full w-[80%]"></div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <!-- Bullet details -->
+            <ul class="space-y-2.5">
+              {item.details.map(detail => (
+                <li class="flex items-start text-sm text-gray-300">
+                  <svg class="w-4 h-4 text-mesh-accent mr-2.5 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>{detail}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>

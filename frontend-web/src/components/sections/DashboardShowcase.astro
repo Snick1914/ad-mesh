@@ -1,0 +1,330 @@
+---
+---
+
+<section id="dashboard-showcase" class="py-24 bg-mesh-dark relative overflow-hidden border-b border-white/5">
+  <!-- Interactive Map Glow background -->
+  <div class="absolute top-1/4 right-0 w-[500px] h-[500px] bg-mesh-accent/5 blur-[120px] rounded-full pointer-events-none"></div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex flex-col lg:flex-row items-center gap-16">
+      
+      <!-- Left side: Description -->
+      <div class="lg:w-2/5 space-y-6 reveal-up">
+        <h3 class="text-3xl md:text-5xl font-bold text-white leading-tight">Una sola plataforma unificada</h3>
+        <p class="text-lg text-mesh-muted leading-relaxed">
+          Toda la administración se consolida en una sola aplicación web en la nube, estructurada en dos apartados especializados para mantener el orden y enfoque de cada equipo:
+        </p>
+
+        <div class="space-y-4 pt-4">
+          <div class="flex items-start gap-4">
+            <div class="w-10 h-10 rounded-lg bg-mesh-accent/10 border border-mesh-accent/20 flex items-center justify-center shrink-0">
+              <svg class="w-5 h-5 text-mesh-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
+            </div>
+            <div>
+              <h4 class="text-white font-bold text-base">Módulo de Señalización (Signage)</h4>
+              <p class="text-mesh-muted text-sm leading-relaxed">Diseñado para mercadotecnia. Controle las campañas publicitarias, programe anuncios por horario y edite playlists multimedia sin tocar variables técnicas.</p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-4">
+            <div class="w-10 h-10 rounded-lg bg-mesh-accent/10 border border-mesh-accent/20 flex items-center justify-center shrink-0">
+              <svg class="w-5 h-5 text-mesh-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+            </div>
+            <div>
+              <h4 class="text-white font-bold text-base">Módulo de Telemetría (Telemetry)</h4>
+              <p class="text-mesh-muted text-sm leading-relaxed">Diseñado para operaciones e ingeniería. Visualice variables críticas en tiempo real por KPIs (temperatura, cadena de frío, kWh), configure alertas predictivas y revise históricos de rendimiento.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right side: Beautiful Dashboard Render (Laptop frame + interactive tabs) -->
+      <div class="lg:w-3/5 w-full relative reveal-scale delay-200">
+        <div class="bg-slate-900 border border-white/10 rounded-2xl p-3 shadow-2xl overflow-hidden backdrop-blur-md">
+          
+          <!-- Window Header & Tab Selector -->
+          <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center border-b border-white/5 pb-2.5 mb-3 gap-2 px-1">
+            <div class="flex items-center gap-1.5">
+              <div class="w-3 h-3 rounded-full bg-red-500/80"></div>
+              <div class="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+              <div class="w-3 h-3 rounded-full bg-green-500/80"></div>
+              <span id="window-url" class="text-xs text-mesh-muted ml-3 font-mono">app.ad-mesh.com/telemetry</span>
+            </div>
+            
+            <!-- Interactive Switcher -->
+            <div class="flex bg-slate-950 p-1 rounded-lg border border-white/5">
+              <button id="btn-telemetry" class="px-3 py-1 text-[10px] font-bold rounded-md bg-mesh-accent text-mesh-dark transition-all flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Telemetría
+              </button>
+              <button id="btn-signage" class="px-3 py-1 text-[10px] font-bold rounded-md text-mesh-muted hover:text-white transition-all flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a2 2 0 002-2V6a2 2 0 00-2-2H4a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Signage
+              </button>
+            </div>
+          </div>
+
+          <!-- Tab Content 1: Telemetry (Default Active) -->
+          <div id="content-telemetry" class="grid grid-cols-1 md:grid-cols-12 gap-4">
+            <!-- Left panel: Telemetry stats (Col 7) -->
+            <div class="md:col-span-7 bg-slate-950 rounded-xl p-4 border border-white/5 space-y-4">
+              <div class="flex justify-between items-center">
+                <span class="text-white font-bold text-xs uppercase tracking-wider">Monitoreo de Enfriador</span>
+                <span class="text-[9px] text-mesh-muted">Ref: MED-COOL-04</span>
+              </div>
+              
+              <!-- Grid of sensor meters -->
+              <div class="grid grid-cols-2 gap-3">
+                <div class="bg-white/5 rounded-lg p-3 border border-white/5">
+                  <span class="text-[9px] text-mesh-muted block uppercase tracking-wider">Temp. Evaporador</span>
+                  <div class="flex items-baseline gap-1 mt-1">
+                    <span class="text-xl font-bold text-white font-mono">4.2</span>
+                    <span class="text-mesh-accent text-xs">°C</span>
+                  </div>
+                  <span class="text-[8px] text-green-400 block mt-1">● Óptimo (FDA/COFEPRIS)</span>
+                </div>
+
+                <div class="bg-white/5 rounded-lg p-3 border border-white/5">
+                  <span class="text-[9px] text-mesh-muted block uppercase tracking-wider">Estado Compresor</span>
+                  <div class="flex items-baseline gap-1 mt-1">
+                    <span class="text-xl font-bold text-white font-mono">1.2</span>
+                    <span class="text-yellow-400 text-xs">kW</span>
+                  </div>
+                  <span class="text-[8px] text-yellow-400 block mt-1">● Consumo Ciclo On</span>
+                </div>
+
+                <div class="bg-white/5 rounded-lg p-3 border border-white/5">
+                  <span class="text-[9px] text-mesh-muted block uppercase tracking-wider">Humedad Relativa</span>
+                  <div class="flex items-baseline gap-1 mt-1">
+                    <span class="text-xl font-bold text-white font-mono">55.4</span>
+                    <span class="text-blue-400 text-xs">% RH</span>
+                  </div>
+                  <span class="text-[8px] text-green-400 block mt-1">● Rango Seguro</span>
+                </div>
+
+                <div class="bg-white/5 rounded-lg p-3 border border-white/5">
+                  <span class="text-[9px] text-mesh-muted block uppercase tracking-wider">Alertas Activas</span>
+                  <div class="mt-1 flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-red-400 animate-ping"></span>
+                    <span class="text-[9px] font-bold text-white truncate">SMS & WhatsApp Ok</span>
+                  </div>
+                  <span class="text-[8px] text-gray-500 block mt-1">0 fallas críticas hoy</span>
+                </div>
+              </div>
+
+              <!-- Sparkline simulation chart -->
+              <div class="bg-white/5 rounded-lg p-3 border border-white/5">
+                <div class="flex justify-between items-center mb-2">
+                  <span class="text-[9px] text-mesh-muted block uppercase tracking-wider">Historial de Temperatura (24h)</span>
+                  <span class="text-[9px] text-white/60 font-mono">Promedio: 4.1°C</span>
+                </div>
+                <div class="h-14 flex items-end gap-1 px-1">
+                  <div class="bg-mesh-accent/20 w-full h-[35%] rounded-t"></div>
+                  <div class="bg-mesh-accent/20 w-full h-[45%] rounded-t"></div>
+                  <div class="bg-mesh-accent/30 w-full h-[30%] rounded-t"></div>
+                  <div class="bg-mesh-accent/40 w-full h-[65%] rounded-t"></div>
+                  <div class="bg-mesh-accent/60 w-full h-[50%] rounded-t"></div>
+                  <div class="bg-mesh-accent/50 w-full h-[60%] rounded-t"></div>
+                  <div class="bg-mesh-accent/70 w-full h-[45%] rounded-t"></div>
+                  <div class="bg-mesh-accent/90 w-full h-[75%] rounded-t"></div>
+                  <div class="bg-mesh-accent w-full h-[90%] rounded-t"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right panel: Multi-branch map (Col 5) -->
+            <div class="md:col-span-5 bg-slate-950 rounded-xl p-4 border border-white/5 flex flex-col justify-between space-y-4">
+              <div>
+                <h4 class="text-white font-bold text-xs uppercase tracking-wider mb-2">Ubicaciones Conectadas</h4>
+                <p class="text-[10px] text-mesh-muted mb-4">Red nacional activa</p>
+              </div>
+
+              <div class="relative bg-slate-900 border border-white/5 rounded-lg aspect-square w-full overflow-hidden flex items-center justify-center">
+                <div class="absolute inset-0 bg-[linear-gradient(to_right,#ffffff02_1px,transparent_1px),linear-gradient(to_bottom,#ffffff02_1px,transparent_1px)] bg-[size:10px_10px]"></div>
+                <div class="absolute w-2/3 h-2/3 border border-white/5 rounded-full opacity-20 animate-pulse"></div>
+                
+                <div class="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 group/node">
+                  <span class="absolute inline-flex h-4 w-4 rounded-full bg-mesh-accent opacity-50 animate-ping"></span>
+                  <span class="relative inline-flex rounded-full h-2 w-2 bg-mesh-accent"></span>
+                </div>
+                <div class="absolute top-[25%] left-[40%]">
+                  <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-400"></span>
+                </div>
+                <div class="absolute top-[60%] left-[30%]">
+                  <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-400"></span>
+                </div>
+                <div class="absolute top-[65%] left-[80%]">
+                  <span class="absolute inline-flex h-3 w-3 rounded-full bg-red-400 opacity-50 animate-ping"></span>
+                  <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-400"></span>
+                </div>
+              </div>
+
+              <!-- Legend -->
+              <div class="flex justify-between items-center text-[8px] text-mesh-muted font-mono pt-2 border-t border-white/5">
+                <div class="flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-green-400"></span> 3 Activos
+                </div>
+                <div class="flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-red-400"></span> 1 En Alerta
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab Content 2: Signage (Hidden by Default) -->
+          <div id="content-signage" class="grid grid-cols-1 md:grid-cols-12 gap-4 hidden">
+            <!-- Left panel: Playlist manager & layouts (Col 7) -->
+            <div class="md:col-span-7 bg-slate-950 rounded-xl p-4 border border-white/5 space-y-4">
+              <div class="flex justify-between items-center">
+                <span class="text-white font-bold text-xs uppercase tracking-wider">Gestión de Pantallas (Playlists)</span>
+                <span class="text-[9px] text-mesh-muted">Grupo: Retail-Norte</span>
+              </div>
+
+              <!-- Playlists list -->
+              <div class="space-y-2.5">
+                <div class="bg-white/5 rounded-lg p-3 border border-white/5 flex items-center justify-between">
+                  <div>
+                    <span class="text-[9px] text-mesh-muted block uppercase tracking-wider">Lista Activa</span>
+                    <span class="text-xs font-bold text-white">PROMO_VERANO_Q2</span>
+                  </div>
+                  <span class="text-[8px] bg-mesh-accent/10 text-mesh-accent px-2 py-0.5 rounded border border-mesh-accent/20">Sincronizado</span>
+                </div>
+                <div class="bg-white/5 rounded-lg p-3 border border-white/5 flex items-center justify-between">
+                  <div>
+                    <span class="text-[9px] text-mesh-muted block uppercase tracking-wider">Lista Secundaria</span>
+                    <span class="text-xs font-bold text-white font-mono">AVISOS_CIVICOS_03</span>
+                  </div>
+                  <span class="text-[8px] bg-white/10 text-gray-400 px-2 py-0.5 rounded">En Cola</span>
+                </div>
+              </div>
+
+              <!-- Media Library mock -->
+              <div class="bg-white/5 rounded-lg p-3 border border-white/5 space-y-2">
+                <span class="text-[9px] text-mesh-muted block uppercase tracking-wider">Biblioteca de Contenidos (Caché local)</span>
+                <div class="grid grid-cols-3 gap-2">
+                  <div class="bg-slate-900 border border-white/5 rounded p-1.5 text-center flex flex-col items-center justify-center">
+                    <div class="aspect-video bg-gradient-to-br from-indigo-900 to-slate-900 rounded w-full mb-1 flex flex-col items-center justify-center p-1 text-indigo-300">
+                      <svg class="w-4 h-4 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      <span class="text-[7px] font-bold">MP4</span>
+                    </div>
+                    <span class="text-[7px] text-gray-400 truncate block w-full">Ad_Bebida.mp4</span>
+                  </div>
+                  <div class="bg-slate-900 border border-white/5 rounded p-1.5 text-center flex flex-col items-center justify-center">
+                    <div class="aspect-video bg-gradient-to-br from-cyan-900 to-slate-900 rounded w-full mb-1 flex flex-col items-center justify-center p-1 text-cyan-300">
+                      <svg class="w-4 h-4 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span class="text-[7px] font-bold">JPG</span>
+                    </div>
+                    <span class="text-[7px] text-gray-400 truncate block w-full">Banner_2x1.jpg</span>
+                  </div>
+                  <div class="bg-slate-900 border border-white/5 rounded p-1.5 text-center flex flex-col items-center justify-center">
+                    <div class="aspect-video bg-gradient-to-br from-blue-900 to-slate-900 rounded w-full mb-1 flex flex-col items-center justify-center p-1 text-blue-300">
+                      <svg class="w-4 h-4 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      <span class="text-[7px] font-bold">MP4</span>
+                    </div>
+                    <span class="text-[7px] text-gray-400 truncate block w-full">Aviso_Urg.mp4</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right panel: Active Displays (Col 5) -->
+            <div class="md:col-span-5 bg-slate-950 rounded-xl p-4 border border-white/5 flex flex-col justify-between space-y-4">
+              <div>
+                <h4 class="text-white font-bold text-xs uppercase tracking-wider mb-2">Estatus de Pantallas</h4>
+                <p class="text-[10px] text-mesh-muted mb-4">Uptime & Conectividad HDMI</p>
+              </div>
+
+              <!-- Displays status details -->
+              <div class="space-y-3 flex-grow font-mono text-[9px]">
+                <div class="p-2.5 rounded-lg bg-slate-900 border border-white/5 flex justify-between items-center">
+                  <div>
+                    <p class="text-white font-bold">MX-DF-03 (Refr. 1)</p>
+                    <p class="text-[8px] text-gray-500">1080p @ 60Hz</p>
+                  </div>
+                  <span class="text-green-400 font-bold">● OK</span>
+                </div>
+
+                <div class="p-2.5 rounded-lg bg-slate-900 border border-white/5 flex justify-between items-center">
+                  <div>
+                    <p class="text-white font-bold">MX-DF-04 (Refr. 2)</p>
+                    <p class="text-[8px] text-gray-500">1080p @ 60Hz</p>
+                  </div>
+                  <span class="text-green-400 font-bold">● OK</span>
+                </div>
+
+                <div class="p-2.5 rounded-lg bg-slate-900 border border-white/5 flex justify-between items-center">
+                  <div>
+                    <p class="text-white font-bold">MX-MTY-01 (Tablero)</p>
+                    <p class="text-[8px] text-gray-500">4K @ 30Hz</p>
+                  </div>
+                  <span class="text-green-400 font-bold">● OK</span>
+                </div>
+              </div>
+
+              <!-- Legend -->
+              <div class="flex justify-between items-center text-[8px] text-mesh-muted font-mono pt-2 border-t border-white/5">
+                <span>Total Nodos: 4</span>
+                <span class="text-green-400 font-bold">100% Rep. Activa</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- Click-to-switch Interactivity Script -->
+<script>
+  const btnTelemetry = document.getElementById('btn-telemetry');
+  const btnSignage = document.getElementById('btn-signage');
+  const contentTelemetry = document.getElementById('content-telemetry');
+  const contentSignage = document.getElementById('content-signage');
+  const windowUrl = document.getElementById('window-url');
+
+  if (btnTelemetry && btnSignage && contentTelemetry && contentSignage && windowUrl) {
+    btnTelemetry.addEventListener('click', () => {
+      // Toggle buttons
+      btnTelemetry.classList.add('bg-mesh-accent', 'text-mesh-dark');
+      btnTelemetry.classList.remove('text-mesh-muted', 'hover:text-white');
+      
+      btnSignage.classList.remove('bg-mesh-accent', 'text-mesh-dark');
+      btnSignage.classList.add('text-mesh-muted', 'hover:text-white');
+
+      // Toggle views
+      contentTelemetry.classList.remove('hidden');
+      contentSignage.classList.add('hidden');
+
+      // Change simulated URL
+      windowUrl.innerHTML = 'app.ad-mesh.com/telemetry';
+    });
+
+    btnSignage.addEventListener('click', () => {
+      // Toggle buttons
+      btnSignage.classList.add('bg-mesh-accent', 'text-mesh-dark');
+      btnSignage.classList.remove('text-mesh-muted', 'hover:text-white');
+
+      btnTelemetry.classList.remove('bg-mesh-accent', 'text-mesh-dark');
+      btnTelemetry.classList.add('text-mesh-muted', 'hover:text-white');
+
+      // Toggle views
+      contentSignage.classList.remove('hidden');
+      contentTelemetry.classList.add('hidden');
+
+      // Change simulated URL
+      windowUrl.innerHTML = 'app.ad-mesh.com/signage';
+    });
+  }
+</script>

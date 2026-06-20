@@ -1,0 +1,76 @@
+---
+const documents = [
+  {
+    title: "Brochure Comercial",
+    description: "Información comercial completa del ecosistema, planes SaaS y beneficios financieros de ad-mesh.",
+    format: "PDF (2.4 MB)",
+    color: "from-blue-500 to-indigo-600",
+    url: "/docs/brochure_comercial_admesh.pdf"
+  },
+  {
+    title: "Ficha Técnica: Player AM-200",
+    description: "Especificaciones detalladas de hardware, puertos, compatibilidad eléctrica y certificaciones industriales.",
+    format: "PDF (1.8 MB)",
+    color: "from-cyan-500 to-blue-600",
+    url: "/docs/ficha_tecnica_am200.pdf"
+  },
+  {
+    title: "Manual de Sensores & Modbus",
+    description: "Guía de cableado, configuración de registros y emparejamiento MQTT para la integración de telemetría.",
+    format: "PDF (3.1 MB)",
+    color: "from-purple-500 to-indigo-600",
+    url: "/docs/manual_sensores_modbus.pdf"
+  }
+];
+---
+
+<section id="downloads" class="py-24 bg-mesh-dark relative border-b border-white/5">
+  
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center max-w-3xl mx-auto mb-20 reveal-up">
+      <h2 class="text-mesh-accent font-semibold tracking-wide uppercase text-sm mb-3">Material de Soporte</h2>
+      <h3 class="text-3xl md:text-5xl font-bold text-white mb-6">Recursos y Documentación</h3>
+      <p class="text-lg text-mesh-muted leading-relaxed">
+        Descargue hojas de datos, brochures y guías técnicas para evaluar a fondo el sistema ad-mesh con su equipo de TI y operaciones.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+      {documents.map((doc, index) => (
+        <div class={`bg-mesh-card border border-white/10 rounded-2xl p-6 flex flex-col justify-between group hover:border-mesh-accent/30 transition-all duration-300 reveal-up delay-${(index + 1) * 150}`}>
+          <div>
+            <!-- CSS Document Cover Mockup -->
+            <div class="aspect-[4/3] rounded-xl bg-slate-950/80 border border-white/5 flex items-center justify-center p-6 mb-6 relative overflow-hidden">
+              <div class={`w-20 h-28 rounded-lg bg-gradient-to-br ${doc.color} shadow-lg p-2.5 flex flex-col justify-between transform group-hover:scale-105 group-hover:rotate-1 transition-all duration-300`}>
+                <div class="flex justify-between items-start">
+                  <div class="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[7px] font-bold text-white">ad</div>
+                  <span class="text-[6px] text-white/70 font-mono">v1.2</span>
+                </div>
+                <div class="space-y-1">
+                  <div class="h-[2px] w-2/3 bg-white/40 rounded"></div>
+                  <p class="text-[8px] font-black text-white leading-tight truncate">{doc.title.split(":")[0]}</p>
+                  <div class="h-[1px] w-full bg-white/20 rounded"></div>
+                </div>
+                <div class="flex justify-between items-center text-[6px] text-white/80 font-mono">
+                  <span>PDF</span>
+                  <span>DOWNLOAD</span>
+                </div>
+              </div>
+            </div>
+            
+            <h4 class="text-lg font-bold text-white mb-2">{doc.title}</h4>
+            <p class="text-mesh-muted text-xs leading-relaxed mb-6">{doc.description}</p>
+          </div>
+          
+          <div class="flex items-center justify-between border-t border-white/5 pt-4">
+            <span class="text-[10px] text-gray-500 font-mono">{doc.format}</span>
+            <a href={doc.url} download class="inline-flex items-center text-xs font-bold text-mesh-accent hover:text-white transition-colors gap-1.5">
+              Descargar 
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+            </a>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>

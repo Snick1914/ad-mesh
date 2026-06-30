@@ -13,12 +13,29 @@ def websocket_handshake(sock, host, path="/mqtt"):
         "\r\n"
     ) % (path, host, key)
     
-    sock.write(handshake.encode('utf-8'))
+    data = handshake.encode('utf-8')
+    print("DEBUG websocket_handshake writing data:", len(data), "bytes")
+    try:
+        sock.write(data)
+        print("DEBUG sock.write success!")
+    except Exception as e:
+        print("DEBUG sock.write failed:", e)
+        try:
+            print("DEBUG trying sock.send instead")
+            sock.send(data)
+            print("DEBUG sock.send success!")
+        except Exception as e2:
+            print("DEBUG sock.send also failed:", e2)
+            raise e2
     
     # Leer encabezados de respuesta hasta \r\n\r\n
     response = b""
     while b"\r\n\r\n" not in response:
-        chunk = sock.read(1)
+        try:
+            chunk = sock.read(1)
+        except TypeError as te:
+            print("DEBUG sock.read(1) failed with TypeError, trying recv(1):", te)
+            chunk = sock.recv(1)
         if not chunk:
             raise OSError("Handshake falló: Conexión cerrada")
         response += chunk

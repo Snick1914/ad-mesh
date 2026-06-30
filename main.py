@@ -1,12 +1,13 @@
 import gc
 import time
 import struct
+import sys
 import ujson
 import ntptime
 from machine import UART, Pin, WDT, reset
 import network
-from umqtt.simple import MQTTClient
 import config
+import urequests
 
 # ============================================================================
 # INICIALIZACIÓN DE COMPONENTES Y SEGURIDAD (WDT)
@@ -74,78 +75,6 @@ def asegurar_wifi():
         return True
     return False
 
-class SocketProxy:
-    def __init__(self, sock):
-        self._sock = sock
-    def connect(self, addr):
-        self._sock.connect(addr)
-        if config.MQTT_PORT == 443:
-            import ussl
-            self._sock = ussl.wrap_socket(self._sock, server_hostname=config.MQTT_BROKER)
-        from ws_socket import WebSocketClientSocket
-        self._sock = WebSocketClientSocket(self._sock, config.MQTT_BROKER, path=config.MQTT_WS_PATH)
-    def write(self, data):
-        return self._sock.write(data)
-    def read(self, size):
-        return self._sock.read(size)
-    def send(self, data):
-        return self._sock.send(data)
-    def recv(self, size):
-        return self._sock.recv(size)
-    def close(self):
-        return self._sock.close()
-    def setblocking(self, flag):
-        return self._sock.setblocking(flag)
-
-def asegurar_mqtt(client):
-    """Establece o verifica la conexión con el broker MQTT"""
-    if client is not None:
-        try:
-            # Enviar ping MQTT para verificar si la sesión sigue activa
-            client.ping()
-            return client
-        except Exception:
-            print("[MQTT] Broker desconectado. Forzando reconexión...")
-            try:
-                client.disconnect()
-            except Exception:
-                pass
-            client = None
-
-    # Intentar reconectar si la referencia es nula o se perdió la conexión
-    if client is None:
-        try:
-            wdt.feed()
-            print(f"[MQTT] Conectando a {config.MQTT_BROKER}...")
-            
-            usocket_patched = False
-            import usocket
-            orig_socket = usocket.socket
-            if getattr(config, "MQTT_USE_WS", False):
-                usocket.socket = lambda *a, **k: SocketProxy(orig_socket(*a, **k))
-                usocket_patched = True
-            
-            try:
-                client = MQTTClient(
-                    client_id=config.CLIENT_ID,
-                    server=config.MQTT_BROKER,
-                    port=config.MQTT_PORT,
-                    user=config.MQTT_USER,
-                    password=config.MQTT_PASS,
-                    keepalive=config.MQTT_KEEPALIVE
-                )
-                client.connect()
-            finally:
-                if usocket_patched:
-                    usocket.socket = orig_socket
-                    
-            print("[MQTT] ¡Conexión con Broker establecida!")
-            return client
-        except Exception as e:
-            print("[MQTT] Error al intentar conectar al Broker:", e)
-            return None
-    return client
-
 # ============================================================================
 # CÓDIGO DE PROTOCOLO MODBUS RTU
 # ============================================================================
@@ -210,7 +139,6 @@ def leer_registro_input(start_address):
 # BUCLE DE EJECUCIÓN INDUSTRIAL
 # ============================================================================
 
-mqtt_client = None
 consecutivos_errores_modbus = 0
 
 print("\n--- FIRMWARE DE TELEMETRÍA INDUSTRIAL INICIADO ---")
@@ -228,14 +156,7 @@ while True:
         time.sleep(2)
         continue
 
-    mqtt_client = asegurar_mqtt(mqtt_client)
-    if mqtt_client is None:
-        print("[SISTEMA] Error de conexión MQTT. Reintentando en la siguiente iteración...")
-        time.sleep(2)
-        continue
-
-    # 3. Estructuración del JSON Payload
-    # Nota: timestamp local Unix (sincronizado vía NTP si la red está disponible)
+    # 3. Estructuración del JSON Payload local
     telemetria_payload = {
         "timestamp": time.time(),
         "mediciones": {},
@@ -277,7 +198,6 @@ while True:
 
     # 5. Adquirir lecturas adicionales integradas en la placa
     try:
-        # Aquí puedes añadir código I2C, OneWire, ADC, etc.
         telemetria_payload["sensores_extra"]["temp_tablero"] = 28.4
         telemetria_payload["sensores_extra"]["humedad_ambiente"] = 45.0
         telemetria_payload["sensores_extra"]["estado_rele_1"] = 1
@@ -299,23 +219,34 @@ while True:
         "ram_libre": gc.mem_free()
     }
 
-    # 6. Serializar a JSON y publicar por MQTT
+    # 6. Serializar y enviar a la API mediante HTTP POST
     try:
-        mensaje_json = ujson.dumps(telemetria_payload)
-        print(f"\n[MQTT] Publicando en '{config.TOPIC_TELEMETRIA.decode('utf-8')}':")
-        print(mensaje_json)
+        # Mapeamos los datos al formato esperado por la tabla telemetry_data del backend
+        payload_api = {
+            "device_serial": config.CLIENT_ID,
+            "cpu_temp": telemetria_payload["sensores_extra"].get("temp_tablero", 28.4),
+            "cpu_usage": 0.0,
+            "ram_usage": round(((gc.mem_alloc() / (gc.mem_alloc() + gc.mem_free())) * 100), 2),
+            "sensor_value": telemetria_payload["mediciones"].get("potencia_total", 0.0)
+        }
         
-        mqtt_client.publish(config.TOPIC_TELEMETRIA, mensaje_json)
+        headers = {'Content-Type': 'application/json'}
+        url = "https://api.ad-mesh.com/api/v1/telemetry/"
+        
+        print(f"\n[HTTP] Enviando telemetría a {url}...")
+        print("Payload:", ujson.dumps(payload_api))
+        
+        res = urequests.post(url, json=payload_api, headers=headers)
+        print(f"[HTTP] Enviado con éxito. Estado API: {res.status_code}")
+        res.close() # Liberar sockets
     except Exception as e:
-        print("[MQTT] Fallo al publicar. Forzando reconexión en el siguiente ciclo:", e)
-        mqtt_client = None  # Esto disparará reconexión limpia en el siguiente ciclo
+        print("[HTTP] Error al enviar telemetría a la API:", e)
 
     # 7. Temporizador Inteligente con alimentación constante del Watchdog
     tiempo_transcurrido = time.ticks_diff(time.ticks_ms(), inicio_ciclo)
     tiempo_espera = config.LOOP_INTERVAL_MS - tiempo_transcurrido
     
     if tiempo_espera > 0:
-        # Esperar en pequeños intervalos para mantener el WDT alimentado
         intervalo_espera_ms = 500
         esperado = 0
         while esperado < tiempo_espera:

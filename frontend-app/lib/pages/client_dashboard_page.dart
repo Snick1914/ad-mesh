@@ -20,6 +20,7 @@ class ClientDashboardPage extends StatefulWidget {
 
 class _ClientDashboardPageState extends State<ClientDashboardPage> {
   late int _activeTabIndex;
+  String _activeModule = 'dashboard';
   bool _isSuperuser = false;
   bool _isImpersonating = false;
   String _clientName = 'Cliente ad-mesh';
@@ -64,6 +65,13 @@ class _ClientDashboardPageState extends State<ClientDashboardPage> {
       activeTab = hasAd ? 1 : 0; // Screens or Overview
     }
 
+    String activeModule = 'dashboard';
+    if (activeTab == 1 || activeTab == 2) {
+      activeModule = 'ads';
+    } else if (activeTab == 3) {
+      activeModule = 'telemetry';
+    }
+
     setState(() {
       _isSuperuser = isSuper;
       _isImpersonating = adminToken != null;
@@ -72,6 +80,7 @@ class _ClientDashboardPageState extends State<ClientDashboardPage> {
       _hasTelemetry = hasTel;
       _hasAds = hasAd;
       _activeTabIndex = activeTab;
+      _activeModule = activeModule;
       _isLoading = false;
     });
   }
@@ -216,14 +225,7 @@ class _ClientDashboardPageState extends State<ClientDashboardPage> {
                                     ),
                                   ),
                                 const SizedBox(width: 8),
-                                Text(
-                                  _tabNames[_activeTabIndex],
-                                  style: GoogleFonts.inter(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
+                                _buildTopNavbar(),
                               ],
                             ),
                             Row(
@@ -323,22 +325,21 @@ class _ClientDashboardPageState extends State<ClientDashboardPage> {
             ),
           ),
 
-          // Inicio
-          Padding(
-            padding: const EdgeInsets.only(left: 20, right: 20, top: 24, bottom: 8),
-            child: Text(
-              'INICIO',
-              style: GoogleFonts.robotoMono(
-                color: const Color(0xFF64748B),
-                fontSize: 9,
-                fontWeight: FontWeight.bold,
+          // Active Module Items
+          if (_activeModule == 'dashboard') ...[
+            Padding(
+              padding: const EdgeInsets.only(left: 20, right: 20, top: 24, bottom: 8),
+              child: Text(
+                'INICIO',
+                style: GoogleFonts.robotoMono(
+                  color: const Color(0xFF64748B),
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-          ),
-          _buildSidebarItem(0, _tabNames[0], _tabIcons[0]),
-
-          // Menu section: Ads & Playlist
-          if (_hasAds) ...[
+            _buildSidebarItem(0, _tabNames[0], _tabIcons[0]),
+          ] else if (_activeModule == 'ads' && _hasAds) ...[
             Padding(
               padding: const EdgeInsets.only(left: 20, right: 20, top: 24, bottom: 8),
               child: Text(
@@ -352,10 +353,7 @@ class _ClientDashboardPageState extends State<ClientDashboardPage> {
             ),
             _buildSidebarItem(1, _tabNames[1], _tabIcons[1]),
             _buildSidebarItem(2, _tabNames[2], _tabIcons[2]),
-          ],
-
-          // Menu section: Monitoring
-          if (_hasTelemetry) ...[
+          ] else if (_activeModule == 'telemetry' && _hasTelemetry) ...[
             Padding(
               padding: const EdgeInsets.only(left: 20, right: 20, top: 24, bottom: 8),
               child: Text(
@@ -475,6 +473,97 @@ class _ClientDashboardPageState extends State<ClientDashboardPage> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTopNavbar() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildNavbarTab(
+          label: 'Inicio',
+          icon: Icons.space_dashboard_outlined,
+          isActive: _activeModule == 'dashboard',
+          onTap: () {
+            setState(() {
+              _activeModule = 'dashboard';
+              _activeTabIndex = 0;
+            });
+          },
+        ),
+        if (_hasAds) ...[
+          const SizedBox(width: 12),
+          _buildNavbarTab(
+            label: 'Anuncios y Contenido',
+            icon: Icons.play_circle_outline,
+            isActive: _activeModule == 'ads',
+            onTap: () {
+              setState(() {
+                _activeModule = 'ads';
+                _activeTabIndex = 1;
+              });
+            },
+          ),
+        ],
+        if (_hasTelemetry) ...[
+          const SizedBox(width: 12),
+          _buildNavbarTab(
+            label: 'Telemetría IoT',
+            icon: Icons.analytics_outlined,
+            isActive: _activeModule == 'telemetry',
+            onTap: () {
+              setState(() {
+                _activeModule = 'telemetry';
+                _activeTabIndex = 3;
+              });
+            },
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildNavbarTab({
+    required String label,
+    required IconData icon,
+    required bool isActive,
+    required VoidCallback onTap,
+  }) {
+    const primaryColor = Color(0xFF00F0FF);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive ? primaryColor.withOpacity(0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isActive ? primaryColor.withOpacity(0.3) : Colors.transparent,
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: isActive ? primaryColor : const Color(0xFF94A3B8),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+                color: isActive ? Colors.white : const Color(0xFF94A3B8),
+              ),
+            ),
+          ],
         ),
       ),
     );

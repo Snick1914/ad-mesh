@@ -133,27 +133,27 @@ class _OverviewViewState extends State<OverviewView> {
             children: [
               _buildStepCard(
                 stepNum: '1',
+                title: 'Vincular Pantalla',
+                desc: 'Empareja tu dispositivo físico usando el código de vinculación de 6 dígitos que se muestra en pantalla.',
+                buttonText: 'Vincular Pantalla',
+                onTap: () => widget.onNavigate(1), // Tab 1 (Devices)
+                icon: Icons.add_to_queue_rounded,
+              ),
+              _buildStepCard(
+                stepNum: '2',
                 title: 'Subir Contenido',
-                desc: 'Sube tus imágenes o videos publicitarios a tu biblioteca multimedia.',
+                desc: 'Sube tus imágenes o videos publicitarios a tu biblioteca desde el editor de playlist.',
                 buttonText: 'Ir a Contenido',
                 onTap: () => widget.onNavigate(2), // Tab 2 (Playlists & Media)
                 icon: Icons.cloud_upload_outlined,
               ),
               _buildStepCard(
-                stepNum: '2',
+                stepNum: '3',
                 title: 'Crear Playlist',
                 desc: 'Agrupa tus archivos en listas de reproducción ordenadas con tiempos definidos.',
                 buttonText: 'Crear Playlist',
                 onTap: () => widget.onNavigate(2), // Tab 2
                 icon: Icons.playlist_add_rounded,
-              ),
-              _buildStepCard(
-                stepNum: '3',
-                title: 'Vincular Pantalla',
-                desc: 'Empareja tu dispositivo físico usando el código de vinculación de 6 dígitos.',
-                buttonText: 'Vincular Pantalla',
-                onTap: () => widget.onNavigate(1), // Tab 1 (Devices)
-                icon: Icons.add_to_queue_rounded,
               ),
               _buildStepCard(
                 stepNum: '4',

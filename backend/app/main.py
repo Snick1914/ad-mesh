@@ -13,6 +13,35 @@ from app.modules.playlists.models import Playlist, PlaylistItem
 
 Base.metadata.create_all(bind=engine)
 
+# Seed default admin user if not exists
+from sqlalchemy.orm import Session
+from app.db.session import SessionLocal
+from app.core import security
+
+db_session: Session = SessionLocal()
+try:
+    admin_user = db_session.query(User).filter(User.email == "admin@ad-mesh.com").first()
+    if not admin_user:
+        hashed_pw = security.get_password_hash("admin")
+        new_admin = User(
+            full_name="Roberto Olmos",
+            email="admin@ad-mesh.com",
+            phone="5512345678",
+            company_name="ad-mesh",
+            hashed_password=hashed_pw,
+            is_active=True,
+            is_superuser=True,
+            max_devices=20,
+            max_storage_gb=100
+        )
+        db_session.add(new_admin)
+        db_session.commit()
+        print("DEBUG: Seeded default admin user admin@ad-mesh.com / admin")
+except Exception as e:
+    print(f"DEBUG: Error seeding database: {e}")
+finally:
+    db_session.close()
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json"

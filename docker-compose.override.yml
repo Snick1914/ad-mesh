@@ -17,15 +17,8 @@ services:
     build:
       context: ./frontend-app
       dockerfile: Dockerfile
-      target: build
-    command: pnpm run dev --host 0.0.0.0
-    volumes:
-      - ./frontend-app:/app
-      - /app/node_modules
     ports:
-      - "3011:5173"
-    environment:
-      - NODE_ENV=development
+      - "3011:80"
 
   api:
     build:

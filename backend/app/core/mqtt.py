@@ -60,16 +60,16 @@ class MQTTService:
         self.client.on_message = self.on_message
         self.client.on_disconnect = self.on_disconnect
         
-        retry = 5
-        while retry > 0:
+        retry_delay = 5
+        while True:
             try:
                 await self.client.connect(MQTT_HOST, port=MQTT_PORT)
                 logger.info("[MQTT] Client task started and connected.")
                 break
             except Exception as connect_err:
-                logger.error(f"[MQTT] Connection failed: {connect_err}. Retrying in 5 seconds...")
-                await asyncio.sleep(5)
-                retry -= 1
+                logger.error(f"[MQTT] Connection failed: {connect_err}. Retrying in {retry_delay} seconds...")
+                await asyncio.sleep(retry_delay)
+                retry_delay = min(retry_delay * 2, 60)  # backoff hasta 60s máximo
 
     async def stop(self):
         if self.client and self.client.is_connected:

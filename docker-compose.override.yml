@@ -53,5 +53,9 @@ services:
     container_name: ad-mesh-mqtt
     ports:
       - "1883:1883"
+      - "9001:9001"
     volumes:
       - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+    networks:
+      - ad-mesh-network
+      - proxy-network

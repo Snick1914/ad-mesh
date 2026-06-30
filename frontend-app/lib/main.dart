@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'pages/login_page.dart';
 import 'pages/register_page.dart';
 import 'pages/admin_dashboard_page.dart';
-import 'pages/admin_users_page.dart';
 import 'pages/client_dashboard_page.dart';
 
 void main() {
@@ -42,11 +41,11 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login': (context) => const LoginPage(),
         '/register': (context) => const RegisterPage(),
-        '/admin': (context) => const AdminDashboardPage(),
-        '/admin/users': (context) => const AdminUsersPage(),
-        '/devices': (context) => const ClientDashboardPage(initialTab: 2),
-        '/media': (context) => const ClientDashboardPage(initialTab: 0),
-        '/playlists': (context) => const ClientDashboardPage(initialTab: 1),
+        '/admin': (context) => const AdminDashboardPage(initialTab: 0),
+        '/admin/users': (context) => const AdminDashboardPage(initialTab: 1),
+        '/overview': (context) => const ClientDashboardPage(initialTab: 0),
+        '/devices': (context) => const ClientDashboardPage(initialTab: 1),
+        '/playlists': (context) => const ClientDashboardPage(initialTab: 2),
         '/telemetry': (context) => const ClientDashboardPage(initialTab: 3),
       },
     );

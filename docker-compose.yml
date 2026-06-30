@@ -40,6 +40,15 @@ services:
     networks:
       - ad-mesh-network
 
+  mosquitto:
+    image: docker.io/library/eclipse-mosquitto:2.0
+    container_name: ad-mesh-mqtt
+    restart: unless-stopped
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+    networks:
+      - ad-mesh-network
+
 networks:
   ad-mesh-network:
     driver: bridge

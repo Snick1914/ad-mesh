@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../services/api_service.dart';
+import 'playlist_builder_dialog.dart';
 
 class DevicesView extends StatefulWidget {
   const DevicesView({super.key});
@@ -58,6 +59,35 @@ class _DevicesViewState extends State<DevicesView> {
       _playlists = plays;
       _isLoading = false;
     });
+  }
+
+  Future<void> _openPlaylistBuilderModal(int? playlistId, String zoneKey) async {
+    final result = await showDialog<int?>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return PlaylistBuilderDialog(playlistId: playlistId);
+      },
+    );
+
+    if (result != null) {
+      final plays = await ApiService.getPlaylists();
+      setState(() {
+        _playlists = plays;
+        if (zoneKey == 'A') {
+          _zoneA = result.toString();
+        } else if (zoneKey == 'B') {
+          _zoneB = result.toString();
+        } else if (zoneKey == 'C') {
+          _zoneC = result.toString();
+        } else if (zoneKey == 'schedule') {
+          _newSchedulePlaylistId = result.toString();
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Playlist guardada y vinculada con éxito'), backgroundColor: Color(0xFF10B981)),
+      );
+    }
   }
 
   Future<void> _fetchSchedules(int deviceId) async {
@@ -1022,14 +1052,14 @@ class _DevicesViewState extends State<DevicesView> {
           // Playlist assignments per Zone
           const Text('Asignación de Playlists', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
           const SizedBox(height: 12),
-          _buildZonePlaylistSelect('Zona A', _zoneA, (val) => setState(() => _zoneA = val ?? '')),
+          _buildZonePlaylistSelect('Zona A', 'A', _zoneA, (val) => setState(() => _zoneA = val ?? '')),
           if (_layout != 'single') ...[
             const SizedBox(height: 12),
-            _buildZonePlaylistSelect('Zona B', _zoneB, (val) => setState(() => _zoneB = val ?? '')),
+            _buildZonePlaylistSelect('Zona B', 'B', _zoneB, (val) => setState(() => _zoneB = val ?? '')),
           ],
           if (_layout == 'l-shape') ...[
             const SizedBox(height: 12),
-            _buildZonePlaylistSelect('Zona C (Cintillo)', _zoneC, (val) => setState(() => _zoneC = val ?? '')),
+            _buildZonePlaylistSelect('Zona C (Cintillo)', 'C', _zoneC, (val) => setState(() => _zoneC = val ?? '')),
           ],
           const SizedBox(height: 32),
 
@@ -1102,36 +1132,64 @@ class _DevicesViewState extends State<DevicesView> {
     );
   }
 
-  Widget _buildZonePlaylistSelect(String zoneName, String value, Function(String?) onChanged) {
+  Widget _buildZonePlaylistSelect(String zoneName, String zoneKey, String value, Function(String?) onChanged) {
     const darkBg = Color(0xFF05070A);
+    const primaryColor = Color(0xFF00F0FF);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(zoneName, style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold)),
         const SizedBox(height: 4),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: darkBg,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white12),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: value.isEmpty ? null : value,
-              isExpanded: true,
-              dropdownColor: darkBg,
-              style: const TextStyle(color: Colors.white, fontSize: 13),
-              hint: const Text('-- Sin Playlist Seleccionada --', style: TextStyle(color: Colors.white30, fontSize: 13)),
-              items: _playlists.map<DropdownMenuItem<String>>((p) {
-                return DropdownMenuItem<String>(
-                  value: p['id'].toString(),
-                  child: Text(p['name'] ?? ''),
-                );
-              }).toList(),
-              onChanged: onChanged,
+        Row(
+          children: [
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: darkBg,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white12),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: value.isEmpty ? null : value,
+                    isExpanded: true,
+                    dropdownColor: darkBg,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    hint: const Text('-- Sin Playlist Seleccionada --', style: TextStyle(color: Colors.white30, fontSize: 13)),
+                    items: _playlists.map<DropdownMenuItem<String>>((p) {
+                      return DropdownMenuItem<String>(
+                        value: p['id'].toString(),
+                        child: Text(p['name'] ?? ''),
+                      );
+                    }).toList(),
+                    onChanged: onChanged,
+                  ),
+                ),
+              ),
             ),
-          ),
+            const SizedBox(width: 8),
+            if (value.isNotEmpty)
+              IconButton(
+                onPressed: () => _openPlaylistBuilderModal(int.parse(value), zoneKey),
+                icon: const Icon(Icons.edit_note_rounded, color: primaryColor),
+                tooltip: 'Editar esta playlist',
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.white.withOpacity(0.05),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            const SizedBox(width: 4),
+            IconButton(
+              onPressed: () => _openPlaylistBuilderModal(null, zoneKey),
+              icon: const Icon(Icons.add_circle_outline_rounded, color: primaryColor),
+              tooltip: 'Crear nueva playlist',
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.white.withOpacity(0.05),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ],
         ),
       ],
     );

@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import 'admin_dashboard_page.dart';
 import 'login_page.dart';
+import 'views/overview_view.dart';
 import 'views/media_view.dart';
 import 'views/playlists_view.dart';
 import 'views/devices_view.dart';
@@ -23,26 +24,23 @@ class _ClientDashboardPageState extends State<ClientDashboardPage> {
   bool _isImpersonating = false;
   String _clientName = 'Cliente ad-mesh';
   String _clientEmail = '';
+  bool _hasTelemetry = true;
+  bool _hasAds = true;
   bool _isLoading = true;
 
-  final List<Widget> _views = [
-    const MediaView(),
-    const PlaylistsView(),
-    const DevicesView(),
-    const TelemetryView(),
-  ];
+  late final List<Widget> _views;
 
   final List<String> _tabNames = [
-    'Biblioteca',
-    'Playlists',
-    'Dispositivos',
+    'Panel de Control',
+    'Mis Pantallas',
+    'Playlists y Contenido',
     'Telemetría IoT',
   ];
 
   final List<IconData> _tabIcons = [
-    Icons.movie_creation_outlined,
-    Icons.queue_music_outlined,
+    Icons.space_dashboard_outlined,
     Icons.monitor_rounded,
+    Icons.queue_music_outlined,
     Icons.offline_bolt_outlined,
   ];
 
@@ -54,12 +52,26 @@ class _ClientDashboardPageState extends State<ClientDashboardPage> {
     bool isSuper = payload['is_superuser'] ?? false;
     String name = payload['full_name'] ?? 'Usuario Cliente';
     String email = payload['email'] ?? 'cliente@admesh.com';
+    bool hasTel = payload['has_telemetry'] ?? true;
+    bool hasAd = payload['has_ads'] ?? true;
+
+    // Smart redirection if current tab is unauthorized
+    int activeTab = widget.initialTab;
+    if (!hasAd && (activeTab == 1 || activeTab == 2)) {
+      activeTab = hasTel ? 3 : 0; // Telemetry or Overview
+    }
+    if (!hasTel && activeTab == 3) {
+      activeTab = hasAd ? 1 : 0; // Screens or Overview
+    }
 
     setState(() {
       _isSuperuser = isSuper;
       _isImpersonating = adminToken != null;
       _clientName = name;
       _clientEmail = email;
+      _hasTelemetry = hasTel;
+      _hasAds = hasAd;
+      _activeTabIndex = activeTab;
       _isLoading = false;
     });
   }
@@ -93,6 +105,22 @@ class _ClientDashboardPageState extends State<ClientDashboardPage> {
   void initState() {
     super.initState();
     _activeTabIndex = widget.initialTab;
+    _views = [
+      OverviewView(onNavigate: (index) {
+        String routeName;
+        switch (index) {
+          case 0: routeName = '/overview'; break;
+          case 1: routeName = '/devices'; break;
+          case 2: routeName = '/playlists'; break;
+          case 3: routeName = '/telemetry'; break;
+          default: routeName = '/overview';
+        }
+        Navigator.pushReplacementNamed(context, routeName);
+      }),
+      const DevicesView(),
+      const PlaylistsView(),
+      const TelemetryView(),
+    ];
     _checkSessionStatus();
   }
 
@@ -181,7 +209,10 @@ class _ClientDashboardPageState extends State<ClientDashboardPage> {
                                   Builder(
                                     builder: (context) => IconButton(
                                       icon: const Icon(Icons.menu, color: Colors.white),
-                                      onPressed: () => Scaffold.of(context).openDrawer(),
+                                      onPressed: () {
+                                        final state = Scaffold.maybeOf(context);
+                                        if (state != null) state.openDrawer();
+                                      },
                                     ),
                                   ),
                                 const SizedBox(width: 8),
@@ -292,11 +323,11 @@ class _ClientDashboardPageState extends State<ClientDashboardPage> {
             ),
           ),
 
-          // Menu section: Ads & Playlist
+          // Inicio
           Padding(
             padding: const EdgeInsets.only(left: 20, right: 20, top: 24, bottom: 8),
             child: Text(
-              'PUBLICIDAD Y ANUNCIOS',
+              'INICIO',
               style: GoogleFonts.robotoMono(
                 color: const Color(0xFF64748B),
                 fontSize: 9,
@@ -305,22 +336,39 @@ class _ClientDashboardPageState extends State<ClientDashboardPage> {
             ),
           ),
           _buildSidebarItem(0, _tabNames[0], _tabIcons[0]),
-          _buildSidebarItem(1, _tabNames[1], _tabIcons[1]),
 
-          // Menu section: Monitoring
-          Padding(
-            padding: const EdgeInsets.only(left: 20, right: 20, top: 24, bottom: 8),
-            child: Text(
-              'MONITOREO Y TELEMETRÍA',
-              style: GoogleFonts.robotoMono(
-                color: const Color(0xFF64748B),
-                fontSize: 9,
-                fontWeight: FontWeight.bold,
+          // Menu section: Ads & Playlist
+          if (_hasAds) ...[
+            Padding(
+              padding: const EdgeInsets.only(left: 20, right: 20, top: 24, bottom: 8),
+              child: Text(
+                'DISTRIBUCIÓN Y CONTENIDO',
+                style: GoogleFonts.robotoMono(
+                  color: const Color(0xFF64748B),
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-          ),
-          _buildSidebarItem(2, _tabNames[2], _tabIcons[2]),
-          _buildSidebarItem(3, _tabNames[3], _tabIcons[3]),
+            _buildSidebarItem(1, _tabNames[1], _tabIcons[1]),
+            _buildSidebarItem(2, _tabNames[2], _tabIcons[2]),
+          ],
+
+          // Menu section: Monitoring
+          if (_hasTelemetry) ...[
+            Padding(
+              padding: const EdgeInsets.only(left: 20, right: 20, top: 24, bottom: 8),
+              child: Text(
+                'MONITOREO',
+                style: GoogleFonts.robotoMono(
+                  color: const Color(0xFF64748B),
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            _buildSidebarItem(3, _tabNames[3], _tabIcons[3]),
+          ],
 
           const Spacer(),
 
@@ -333,7 +381,10 @@ class _ClientDashboardPageState extends State<ClientDashboardPage> {
                 if (_isSuperuser)
                   ElevatedButton(
                     onPressed: () {
-                      if (Scaffold.of(context).isDrawerOpen) Navigator.pop(context);
+                      final scaffoldState = Scaffold.maybeOf(context);
+                      if (scaffoldState != null && scaffoldState.isDrawerOpen) {
+                        Navigator.pop(context);
+                      }
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(builder: (context) => const AdminDashboardPage()),
@@ -384,19 +435,19 @@ class _ClientDashboardPageState extends State<ClientDashboardPage> {
           String routeName;
           switch (index) {
             case 0:
-              routeName = '/media';
+              routeName = '/overview';
               break;
             case 1:
-              routeName = '/playlists';
+              routeName = '/devices';
               break;
             case 2:
-              routeName = '/devices';
+              routeName = '/playlists';
               break;
             case 3:
               routeName = '/telemetry';
               break;
             default:
-              routeName = '/media';
+              routeName = '/overview';
           }
           Navigator.pushReplacementNamed(context, routeName);
         },

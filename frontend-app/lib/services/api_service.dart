@@ -57,6 +57,7 @@ class ApiService {
     try {
       final response = await http.post(
         Uri.parse('$defaultApiUrl/login/access-token'),
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: {
           'username': username,
           'password': password,
@@ -71,13 +72,17 @@ class ApiService {
           return true;
         }
       }
-      print('Backend returned status: ${response.statusCode}. Using mock login.');
-      await saveToken("mock_bearer_token_ad_mesh");
-      return true;
+
+      String errorMsg = 'Error al iniciar sesión (${response.statusCode})';
+      try {
+        final Map<String, dynamic> data = json.decode(response.body);
+        if (data.containsKey('detail')) {
+          errorMsg = data['detail'].toString();
+        }
+      } catch (_) {}
+      throw Exception(errorMsg);
     } catch (e) {
-      print('Failed to connect to backend: $e. Using mock login.');
-      await saveToken("mock_bearer_token_ad_mesh");
-      return true;
+      rethrow;
     }
   }
 
@@ -192,7 +197,7 @@ class ApiService {
   }
 
   // Update user limits
-  static Future<User> updateUserLimits(int userId, int maxDevices, double maxStorage) async {
+  static Future<User> updateUserLimits(int userId, int maxDevices, double maxStorage, bool hasTelemetry, bool hasAds) async {
     final token = await getToken();
     if (token == "mock_bearer_token_ad_mesh") {
       return User(
@@ -204,6 +209,8 @@ class ApiService {
         isSuperuser: false,
         maxDevices: maxDevices,
         maxStorageGb: maxStorage,
+        hasTelemetry: hasTelemetry,
+        hasAds: hasAds,
       );
     }
     try {
@@ -214,6 +221,8 @@ class ApiService {
         body: json.encode({
           'max_devices': maxDevices,
           'max_storage_gb': maxStorage.toInt(),
+          'has_telemetry': hasTelemetry,
+          'has_ads': hasAds,
         }),
       ).timeout(const Duration(seconds: 4));
 
@@ -232,6 +241,8 @@ class ApiService {
         isSuperuser: false,
         maxDevices: maxDevices,
         maxStorageGb: maxStorage,
+        hasTelemetry: hasTelemetry,
+        hasAds: hasAds,
       );
     }
   }
@@ -249,6 +260,8 @@ class ApiService {
         isSuperuser: false,
         maxDevices: 5,
         maxStorageGb: 10,
+        hasTelemetry: true,
+        hasAds: true,
       );
     }
     try {
@@ -275,6 +288,8 @@ class ApiService {
         isSuperuser: false,
         maxDevices: 5,
         maxStorageGb: 10,
+        hasTelemetry: true,
+        hasAds: true,
       );
     }
   }

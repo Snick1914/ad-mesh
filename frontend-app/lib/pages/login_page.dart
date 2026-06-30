@@ -39,18 +39,34 @@ class _LoginPageState extends State<LoginPage> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
-    final success = await ApiService.login(
-      _emailController.text,
-      _passwordController.text,
-    );
-    setState(() => _isLoading = false);
+    try {
+      final success = await ApiService.login(
+        _emailController.text,
+        _passwordController.text,
+      );
+      setState(() => _isLoading = false);
 
-    if (success && mounted) {
-      final payload = await ApiService.decodeToken();
-      if (payload['is_superuser'] == true) {
-        Navigator.pushReplacementNamed(context, '/admin');
-      } else {
-        Navigator.pushReplacementNamed(context, '/devices');
+      if (success && mounted) {
+        final payload = await ApiService.decodeToken();
+        if (payload['is_superuser'] == true) {
+          Navigator.pushReplacementNamed(context, '/admin');
+        } else {
+          Navigator.pushReplacementNamed(context, '/overview');
+        }
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        String msg = e.toString();
+        if (msg.startsWith('Exception: ')) {
+          msg = msg.substring(11);
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
       }
     }
   }

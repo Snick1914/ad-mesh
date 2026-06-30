@@ -7,6 +7,8 @@ class User {
   final bool isSuperuser;
   final int maxDevices;
   final double maxStorageGb;
+  final bool hasTelemetry;
+  final bool hasAds;
 
   User({
     required this.id,
@@ -17,6 +19,8 @@ class User {
     required this.isSuperuser,
     required this.maxDevices,
     required this.maxStorageGb,
+    required this.hasTelemetry,
+    required this.hasAds,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -29,6 +33,8 @@ class User {
       isSuperuser: json['is_superuser'] ?? false,
       maxDevices: json['max_devices'] ?? 0,
       maxStorageGb: (json['max_storage_gb'] ?? 0.0).toDouble(),
+      hasTelemetry: json['has_telemetry'] ?? true,
+      hasAds: json['has_ads'] ?? true,
     );
   }
 
@@ -41,6 +47,8 @@ class User {
     bool? isSuperuser,
     int? maxDevices,
     double? maxStorageGb,
+    bool? hasTelemetry,
+    bool? hasAds,
   }) {
     return User(
       id: id ?? this.id,
@@ -51,15 +59,17 @@ class User {
       isSuperuser: isSuperuser ?? this.isSuperuser,
       maxDevices: maxDevices ?? this.maxDevices,
       maxStorageGb: maxStorageGb ?? this.maxStorageGb,
+      hasTelemetry: hasTelemetry ?? this.hasTelemetry,
+      hasAds: hasAds ?? this.hasAds,
     );
   }
 
   static List<User> mockList() {
     return [
-      User(id: 1, fullName: "Roberto Olmos", email: "roberto@admesh.com", phone: "5512345678", isActive: true, isSuperuser: true, maxDevices: 20, maxStorageGb: 100.0),
-      User(id: 2, fullName: "Gimnasio FitZone", email: "admin@fitzone.com", phone: "5598765432", isActive: true, isSuperuser: false, maxDevices: 8, maxStorageGb: 25.0),
-      User(id: 3, fullName: "Restaurante El Gourmet", email: "contacto@elgourmet.mx", phone: "5577665544", isActive: true, isSuperuser: false, maxDevices: 4, maxStorageGb: 15.0),
-      User(id: 4, fullName: "Tienda ModaExpress", email: "compras@modaexpress.com", phone: "5522334455", isActive: false, isSuperuser: false, maxDevices: 5, maxStorageGb: 10.0),
+      User(id: 1, fullName: "Roberto Olmos", email: "roberto@admesh.com", phone: "5512345678", isActive: true, isSuperuser: true, maxDevices: 20, maxStorageGb: 100.0, hasTelemetry: true, hasAds: true),
+      User(id: 2, fullName: "Gimnasio FitZone", email: "admin@fitzone.com", phone: "5598765432", isActive: true, isSuperuser: false, maxDevices: 8, maxStorageGb: 25.0, hasTelemetry: false, hasAds: true),
+      User(id: 3, fullName: "Restaurante El Gourmet", email: "contacto@elgourmet.mx", phone: "5577665544", isActive: true, isSuperuser: false, maxDevices: 4, maxStorageGb: 15.0, hasTelemetry: true, hasAds: false),
+      User(id: 4, fullName: "Tienda ModaExpress", email: "compras@modaexpress.com", phone: "5522334455", isActive: false, isSuperuser: false, maxDevices: 5, maxStorageGb: 10.0, hasTelemetry: false, hasAds: false),
     ];
   }
 }

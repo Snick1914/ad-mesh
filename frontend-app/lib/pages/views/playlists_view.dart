@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../../services/api_service.dart';
 
 class PlaylistsView extends StatefulWidget {
@@ -15,6 +16,7 @@ class _PlaylistsViewState extends State<PlaylistsView> {
   List<dynamic> _mediaItems = [];
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _isUploading = false;
 
   // Builder state
   int? _activePlaylistId;
@@ -30,6 +32,39 @@ class _PlaylistsViewState extends State<PlaylistsView> {
       _mediaItems = media;
       _isLoading = false;
     });
+  }
+
+  Future<void> _pickAndUpload() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['mp4', 'mov', 'jpg', 'jpeg', 'png'],
+      withData: true,
+    );
+
+    if (result != null && result.files.isNotEmpty) {
+      final file = result.files.first;
+      final bytes = file.bytes;
+      final name = file.name;
+      if (bytes != null) {
+        setState(() {
+          _isUploading = true;
+        });
+        final success = await ApiService.uploadMedia(bytes, name);
+        setState(() {
+          _isUploading = false;
+        });
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Archivo subido correctamente a la biblioteca'), backgroundColor: Color(0xFF10B981)),
+          );
+          await _loadData();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Error al subir el archivo o límite de cuota superado'), backgroundColor: Colors.redAccent),
+          );
+        }
+      }
+    }
   }
 
   @override
@@ -389,8 +424,31 @@ class _PlaylistsViewState extends State<PlaylistsView> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Biblioteca', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-                      const Text('Selecciona medios para añadir', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Biblioteca', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                                const Text('Selecciona para añadir', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11)),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: _isUploading ? null : _pickAndUpload,
+                            icon: _isUploading
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(primaryColor)),
+                                  )
+                                : const Icon(Icons.cloud_upload_outlined, color: primaryColor, size: 20),
+                            tooltip: 'Subir archivos multimedia',
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 16),
                       Expanded(
                         child: _mediaItems.isEmpty

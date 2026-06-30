@@ -11,7 +11,9 @@ def create_access_token(
     email: str = "",
     full_name: str = "",
     expires_delta: timedelta = None,
-    is_superuser: bool = False
+    is_superuser: bool = False,
+    has_telemetry: bool = True,
+    has_ads: bool = True
 ) -> str:
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
@@ -24,7 +26,9 @@ def create_access_token(
         "sub": str(subject),
         "email": email,
         "full_name": full_name,
-        "is_superuser": is_superuser
+        "is_superuser": is_superuser,
+        "has_telemetry": has_telemetry,
+        "has_ads": has_ads
     }
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt

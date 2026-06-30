@@ -10,6 +10,8 @@ class UserBase(BaseModel):
     company_name: Optional[str] = None
     max_devices: Optional[int] = 5
     max_storage_gb: Optional[int] = 10
+    has_telemetry: Optional[bool] = True
+    has_ads: Optional[bool] = True
 
 class UserCreate(UserBase):
     email: EmailStr
@@ -37,6 +39,8 @@ class TokenPayload(BaseModel):
 class UserLimitsUpdate(BaseModel):
     max_devices: int
     max_storage_gb: int
+    has_telemetry: bool
+    has_ads: bool
 
 class UserStatusUpdate(BaseModel):
     is_active: bool

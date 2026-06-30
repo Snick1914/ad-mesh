@@ -10,6 +10,7 @@ from app.models.user import User  # Importar todos los modelos aquí
 from app.modules.devices.models import Device, DeviceSchedule
 from app.modules.media.models import Media
 from app.modules.playlists.models import Playlist, PlaylistItem
+from app.modules.telemetry.models import TelemetryData
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

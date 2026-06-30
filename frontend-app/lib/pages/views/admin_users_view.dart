@@ -1,23 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../models/user.dart';
-import '../services/api_service.dart';
+import '../../models/user.dart';
+import '../../services/api_service.dart';
 
-class AdminUsersPage extends StatefulWidget {
-  const AdminUsersPage({super.key});
+class AdminUsersView extends StatefulWidget {
+  const AdminUsersView({super.key});
 
   @override
-  State<AdminUsersPage> createState() => _AdminUsersPageState();
+  State<AdminUsersView> createState() => _AdminUsersViewState();
 }
 
-class _AdminUsersPageState extends State<AdminUsersPage> {
+class _AdminUsersViewState extends State<AdminUsersView> {
   List<User> _users = [];
   String _searchQuery = '';
   bool _isLoading = true;
 
   Future<void> _fetchUsers() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     final users = await ApiService.getUsers();
+    if (!mounted) return;
     setState(() {
       _users = users;
       _isLoading = false;
@@ -33,6 +35,8 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
   void _showEditLimitsDialog(User user) {
     final devicesController = TextEditingController(text: '${user.maxDevices}');
     final storageController = TextEditingController(text: '${user.maxStorageGb.toInt()}');
+    bool hasTelemetry = user.hasTelemetry;
+    bool hasAds = user.hasAds;
     bool isSaving = false;
 
     showDialog(
@@ -45,7 +49,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
             return AlertDialog(
               backgroundColor: cardBg,
               title: Text(
-                'Ajustar Límites',
+                'Ajustar Límites y Módulos',
                 style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.white),
               ),
               content: Column(
@@ -80,6 +84,36 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                       focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: primaryColor)),
                     ),
                   ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Módulos Habilitados:',
+                    style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  SwitchListTile(
+                    title: const Text('Anuncios y Contenido', style: TextStyle(color: Colors.white, fontSize: 13)),
+                    subtitle: const Text('Biblioteca, playlists y pantallas.', style: TextStyle(color: Colors.white38, fontSize: 11)),
+                    value: hasAds,
+                    activeColor: primaryColor,
+                    contentPadding: EdgeInsets.zero,
+                    onChanged: (val) {
+                      setModalState(() {
+                        hasAds = val;
+                      });
+                    },
+                  ),
+                  SwitchListTile(
+                    title: const Text('Telemetría IoT', style: TextStyle(color: Colors.white, fontSize: 13)),
+                    subtitle: const Text('Sensores y gráficos en tiempo real.', style: TextStyle(color: Colors.white38, fontSize: 11)),
+                    value: hasTelemetry,
+                    activeColor: primaryColor,
+                    contentPadding: EdgeInsets.zero,
+                    onChanged: (val) {
+                      setModalState(() {
+                        hasTelemetry = val;
+                      });
+                    },
+                  ),
                 ],
               ),
               actions: [
@@ -96,6 +130,8 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                             user.id,
                             int.tryParse(devicesController.text) ?? user.maxDevices,
                             double.tryParse(storageController.text) ?? user.maxStorageGb,
+                            hasTelemetry,
+                            hasAds,
                           );
                           setModalState(() => isSaving = false);
                           if (mounted) {
@@ -119,100 +155,110 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
   @override
   Widget build(BuildContext context) {
     const primaryColor = Color(0xFF00F0FF);
-    const darkBg = Color(0xFF05070A);
     const cardBg = Color(0xFF121824);
 
-    final isDesktop = MediaQuery.of(context).size.width >= 900;
     final filteredUsers = _users.where((u) {
       final q = _searchQuery.toLowerCase();
       return u.fullName.toLowerCase().contains(q) || u.email.toLowerCase().contains(q);
     }).toList();
 
-    return Scaffold(
-      backgroundColor: darkBg,
-      appBar: AppBar(
-        backgroundColor: cardBg,
-        elevation: 0,
-        title: Text(
-          'Gestión de Clientes',
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-      ),
-      body: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (isDesktop) SizedBox(width: 260, child: _buildSidebar(context)),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Title
-                  Text(
-                    'Gestión de Clientes',
-                    style: GoogleFonts.inter(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                    ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Title
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Gestión de Clientes',
+                  style: GoogleFonts.inter(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Administra accesos, cuotas y soporte en tiempo real.',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      color: const Color(0xFF94A3B8),
-                    ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Administra accesos, cuotas y soporte en tiempo real.',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: const Color(0xFF94A3B8),
                   ),
-                  const SizedBox(height: 24),
-
-                  // Search Bar
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: cardBg,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white.withOpacity(0.05)),
-                    ),
-                    child: TextField(
-                      style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(
-                        icon: Icon(Icons.search, color: Color(0xFF94A3B8)),
-                        hintText: 'Buscar por nombre o correo...',
-                        hintStyle: TextStyle(color: Color(0xFF94A3B8)),
-                        border: InputBorder.none,
-                      ),
-                      onChanged: (val) {
-                        setState(() {
-                          _searchQuery = val;
-                        });
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Users List
-                  Expanded(
-                    child: _isLoading
-                        ? const Center(
-                            child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(primaryColor)),
-                          )
-                        : ListView.separated(
-                            itemCount: filteredUsers.length,
-                            separatorBuilder: (c, i) => const SizedBox(height: 12),
-                            itemBuilder: (context, index) {
-                              final user = filteredUsers[index];
-                              return _buildUserCard(user);
-                            },
-                          ),
-                  ),
-                ],
+                ),
+              ],
+            ),
+            ElevatedButton.icon(
+              onPressed: _fetchUsers,
+              icon: const Icon(Icons.refresh, size: 16),
+              label: const Text('Actualizar'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white.withOpacity(0.05),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: Colors.white.withOpacity(0.08)),
+                ),
               ),
             ),
+          ],
+        ),
+        const SizedBox(height: 24),
+
+        // Search Bar
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withOpacity(0.05)),
           ),
-        ],
-      ),
+          child: TextField(
+            style: const TextStyle(color: Colors.white),
+            decoration: const InputDecoration(
+              icon: Icon(Icons.search, color: Color(0xFF94A3B8)),
+              hintText: 'Buscar por nombre o correo...',
+              hintStyle: TextStyle(color: Color(0xFF94A3B8)),
+              border: InputBorder.none,
+            ),
+            onChanged: (val) {
+              setState(() {
+                _searchQuery = val;
+              });
+            },
+          ),
+        ),
+        const SizedBox(height: 24),
+
+        // Users List
+        Expanded(
+          child: _isLoading
+              ? const Center(
+                  child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(primaryColor)),
+                )
+              : filteredUsers.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.people_outline_rounded, size: 64, color: Colors.white24),
+                          const SizedBox(height: 16),
+                          Text('No se encontraron clientes', style: GoogleFonts.inter(color: Colors.white70)),
+                        ],
+                      ),
+                    )
+                  : ListView.separated(
+                      itemCount: filteredUsers.length,
+                      separatorBuilder: (c, i) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final user = filteredUsers[index];
+                        return _buildUserCard(user);
+                      },
+                    ),
+        ),
+      ],
     );
   }
 
@@ -325,6 +371,41 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                       Text('${user.maxStorageGb.toInt()} GB', style: GoogleFonts.robotoMono(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
                     ],
                   ),
+                  const SizedBox(width: 24),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('MÓDULOS CONTRATADOS', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 9, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          if (user.hasAds)
+                            Container(
+                              margin: const EdgeInsets.only(right: 6),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF00F0FF).withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: const Color(0xFF00F0FF).withOpacity(0.15)),
+                              ),
+                              child: const Text('Anuncios', style: TextStyle(color: Color(0xFF00F0FF), fontSize: 9, fontWeight: FontWeight.bold)),
+                            ),
+                          if (user.hasTelemetry)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF7000FF).withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: const Color(0xFF7000FF).withOpacity(0.15)),
+                              ),
+                              child: const Text('Telemetría', style: TextStyle(color: Color(0xFFB280FF), fontSize: 9, fontWeight: FontWeight.bold)),
+                            ),
+                          if (!user.hasAds && !user.hasTelemetry)
+                            const Text('Ninguno', style: TextStyle(color: Colors.white30, fontSize: 10, fontStyle: FontStyle.italic)),
+                        ],
+                      )
+                    ],
+                  ),
                 ],
               ),
               // Action Buttons
@@ -383,38 +464,6 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
               )
             ],
           )
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSidebar(BuildContext context) {
-    const cardBg = Color(0xFF121824);
-    const primaryColor = Color(0xFF00F0FF);
-
-    return Material(
-      color: cardBg,
-      child: Column(
-        children: [
-          const SizedBox(height: 24),
-          ListTile(
-            leading: const Icon(Icons.dashboard_rounded, color: Color(0xFF94A3B8)),
-            title: const Text('Dashboard', style: TextStyle(color: Color(0xFF94A3B8))),
-            onTap: () {
-              final scaffoldState = Scaffold.maybeOf(context);
-              if (scaffoldState != null && scaffoldState.isDrawerOpen) {
-                Navigator.pop(context);
-              }
-              if (Navigator.canPop(context)) {
-                Navigator.pop(context);
-              }
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.people_alt_rounded, color: primaryColor),
-            title: const Text('Clientes', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            onTap: () {},
-          ),
         ],
       ),
     );

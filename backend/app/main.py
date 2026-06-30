@@ -63,6 +63,17 @@ app.add_middleware(
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
+@app.on_event("startup")
+async def startup_event():
+    import asyncio
+    from app.core.mqtt import mqtt_service
+    asyncio.create_task(mqtt_service.start())
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    from app.core.mqtt import mqtt_service
+    await mqtt_service.stop()
+
 @app.get("/")
 async def root():
     return {"message": f"Welcome to {settings.PROJECT_NAME} API", "status": "online"}

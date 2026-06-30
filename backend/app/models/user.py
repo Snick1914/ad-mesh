@@ -13,3 +13,5 @@ class User(Base):
     google_id = Column(String, unique=True, index=True, nullable=True)
     max_devices = Column(Integer, default=5)
     max_storage_gb = Column(Integer, default=10)
+    has_telemetry = Column(Boolean(), default=True)
+    has_ads = Column(Boolean(), default=True)

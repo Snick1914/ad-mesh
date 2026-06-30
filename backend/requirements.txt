@@ -11,4 +11,5 @@ python-multipart==0.0.9
 python-dotenv==1.0.1
 cors==1.0.1
 google-auth==2.29.0
+gmqtt==0.6.12
 

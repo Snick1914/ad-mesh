@@ -34,7 +34,9 @@ def login_access_token(
             email=user.email,
             full_name=user.full_name or "",
             expires_delta=access_token_expires,
-            is_superuser=user.is_superuser
+            is_superuser=user.is_superuser,
+            has_telemetry=user.has_telemetry,
+            has_ads=user.has_ads
         ),
         "token_type": "bearer",
     }
@@ -126,7 +128,9 @@ def login_google(
                 email=user.email,
                 full_name=user.full_name or "",
                 expires_delta=access_token_expires,
-                is_superuser=user.is_superuser
+                is_superuser=user.is_superuser,
+                has_telemetry=user.has_telemetry,
+                has_ads=user.has_ads
             ),
             "token_type": "bearer",
         }

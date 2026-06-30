@@ -126,6 +126,8 @@ def update_user_limits(
     
     user.max_devices = limits.max_devices
     user.max_storage_gb = limits.max_storage_gb
+    user.has_telemetry = limits.has_telemetry
+    user.has_ads = limits.has_ads
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -171,7 +173,9 @@ def impersonate_user(
             email=user.email,
             full_name=user.full_name or "",
             expires_delta=access_token_expires,
-            is_superuser=user.is_superuser
+            is_superuser=user.is_superuser,
+            has_telemetry=user.has_telemetry,
+            has_ads=user.has_ads
         ),
         "token_type": "bearer",
     }

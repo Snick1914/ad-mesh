@@ -505,6 +505,27 @@ class ApiService {
     }
   }
 
+  static Future<List<dynamic>> getDeviceTelemetry(String serialNumber) async {
+    final token = await getToken();
+    if (token == "mock_bearer_token_ad_mesh" || token == "mock_bearer_token_client_fitzone") {
+      return [];
+    }
+    try {
+      final headers = await _getHeaders();
+      final response = await http.get(
+        Uri.parse('$defaultApiUrl/telemetry/$serialNumber'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 4));
+
+      if (response.statusCode == 200) {
+        return json.decode(utf8.decode(response.bodyBytes)) as List<dynamic>;
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
   static Future<bool> deleteDeviceSchedule(int scheduleId) async {
     final token = await getToken();
     if (token == "mock_bearer_token_ad_mesh" || token == "mock_bearer_token_client_fitzone") {

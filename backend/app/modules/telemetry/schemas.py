@@ -10,7 +10,8 @@ class TelemetryDataBase(BaseModel):
     sensor_value: Optional[float] = None
 
 class TelemetryDataCreate(TelemetryDataBase):
-    pass
+    mediciones: Optional[dict] = None
+    sensores_extra: Optional[dict] = None
 
 class TelemetryDataOut(TelemetryDataBase):
     id: int

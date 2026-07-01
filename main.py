@@ -227,7 +227,9 @@ while True:
             "cpu_temp": telemetria_payload["sensores_extra"].get("temp_tablero", 28.4),
             "cpu_usage": 0.0,
             "ram_usage": round(((gc.mem_alloc() / (gc.mem_alloc() + gc.mem_free())) * 100), 2),
-            "sensor_value": telemetria_payload["mediciones"].get("potencia_total", 0.0)
+            "sensor_value": telemetria_payload["mediciones"].get("potencia_total", 0.0),
+            "mediciones": telemetria_payload["mediciones"],
+            "sensores_extra": telemetria_payload["sensores_extra"]
         }
         
         headers = {'Content-Type': 'application/json'}

@@ -8,10 +8,11 @@ class TelemetryDataBase(BaseModel):
     cpu_usage: Optional[float] = None
     ram_usage: Optional[float] = None
     sensor_value: Optional[float] = None
-
-class TelemetryDataCreate(TelemetryDataBase):
     mediciones: Optional[dict] = None
     sensores_extra: Optional[dict] = None
+
+class TelemetryDataCreate(TelemetryDataBase):
+    pass
 
 class TelemetryDataOut(TelemetryDataBase):
     id: int

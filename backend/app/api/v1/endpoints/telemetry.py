@@ -21,7 +21,9 @@ async def create_telemetry_log(
         cpu_temp=data.cpu_temp,
         cpu_usage=data.cpu_usage,
         ram_usage=data.ram_usage,
-        sensor_value=data.sensor_value
+        sensor_value=data.sensor_value,
+        mediciones=data.mediciones,
+        sensores_extra=data.sensores_extra
     )
     db.add(db_obj)
     db.commit()

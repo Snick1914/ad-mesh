@@ -17,7 +17,7 @@ cp "$SRC_DIR/boot.py" "$DIST_DIR/boot.py"
 cp "$SRC_DIR/main.py" "$DIST_DIR/main.py"
 
 # Compilar archivos a bytecode .mpy
-FILES_TO_COMPILE=("config" "wifi_manager" "modbus_client" "api_client" "portal" "main_app")
+FILES_TO_COMPILE=("config" "button_handler" "wifi_manager" "modbus_client" "api_client" "portal" "main_app")
 
 for file in "${FILES_TO_COMPILE[@]}"; do
     echo "Compilando: $file.py -> $file.mpy"

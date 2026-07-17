@@ -4,6 +4,7 @@ import ujson
 import os
 import config
 import portal
+import button_handler
 
 def obtener_credenciales():
     """Carga las credenciales guardadas en wifi_config.json o usa las de config.py como fallback."""
@@ -50,11 +51,12 @@ def conectar_wifi(wdt=None):
         print(f"Conectando a WiFi SSID: {ssid}...")
         wlan.connect(ssid, password)
         
-        # Esperar conexión alimentando el watchdog
+        # Esperar conexión alimentando el watchdog y chequeando el botón
         timeout = 20
         while not wlan.isconnected() and timeout > 0:
             if wdt:
                 wdt.feed()  # Alimentar Watchdog
+            button_handler.chequear_boton(wdt)  # Chequear el botón de reset inmediatamente
             time.sleep(1)
             timeout -= 1
             print(".", end="")

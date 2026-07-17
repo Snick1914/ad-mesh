@@ -1,49 +1,21 @@
 import time
 import gc
-from machine import UART, WDT, Pin, reset
+from machine import UART, WDT, reset
 
 import config
 import wifi_manager
 import modbus_client
 import api_client
+import button_handler
 
 # Inicializar Watchdog Timer (30 segundos para evitar bloqueos permanentes)
 wdt = WDT(timeout=30000)
-
-# Configurar el botón de reseteo físico (Active Low con PULL_UP por defecto)
-btn = Pin(config.BUTTON_PIN, Pin.IN, Pin.PULL_UP)
-
-def chequear_boton():
-    """Monitorea el botón. Si se mantiene presionado por 10s, borra credenciales y reinicia."""
-    if btn.value() == 0:
-        print("\n[BOTÓN DETECTADO] Mantén presionado durante 10 segundos para borrar WiFi...")
-        inicio = time.ticks_ms()
-        ultimo_segundo = -1
-        
-        while btn.value() == 0:
-            wdt.feed()  # Evitar reset de watchdog mientras se mantiene pulsado
-            transcurrido_ms = time.ticks_diff(time.ticks_ms(), inicio)
-            segundos = transcurrido_ms // 1000
-            
-            if segundos != ultimo_segundo:
-                print(f"Segundos presionado: {segundos}/10")
-                ultimo_segundo = segundos
-                
-            if transcurrido_ms >= 10000:
-                print("¡Límite de 10 segundos alcanzado! Borrando configuración WiFi y reiniciando...")
-                wifi_manager.borrar_credenciales()
-                time.sleep(1)
-                reset()
-                
-            time.sleep_ms(100)
-            
-        print("[BOTÓN SOLTADO] Cancelado.")
 
 def main():
     print("Iniciando servicio de telemetría en producción...")
     
     # Chequeo inicial del botón por si se arranca con el botón presionado
-    chequear_boton()
+    button_handler.chequear_boton(wdt)
     
     # 1. Conectar a la red
     wifi_manager.conectar_wifi(wdt)
@@ -65,7 +37,7 @@ def main():
         wdt.feed()  # Alimentar Watchdog al inicio de cada ciclo
         
         # Monitorear botón
-        chequear_boton()
+        button_handler.chequear_boton(wdt)
         
         # Liberar memoria fragmentada antes de operaciones pesadas
         gc.collect()
@@ -95,7 +67,7 @@ def main():
 
         # Pausa dividida en pasos cortos monitoreando el botón y alimentando el WDT
         for _ in range(100):
-            chequear_boton()
+            button_handler.chequear_boton(wdt)
             time.sleep_ms(100)
             wdt.feed()
 

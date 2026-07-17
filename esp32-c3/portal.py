@@ -2,6 +2,7 @@ import socket
 import ujson
 import time
 from machine import reset
+import button_handler
 
 HTML_TEMPLATE = """<!DOCTYPE html>
 <html>
@@ -167,9 +168,7 @@ def parse_post_data(request_str):
         for pair in body.split("&"):
             if "=" in pair:
                 k, v = pair.split("=")
-                # Decodificar URL simple
                 v = v.replace("+", " ")
-                # Reemplazo de caracteres codificados básicos
                 v = v.replace("%21", "!").replace("%40", "@").replace("%23", "#").replace("%24", "$").replace("%25", "%")
                 v = v.replace("%5E", "^").replace("%26", "&").replace("%2A", "*").replace("%28", "(").replace("%29", ")")
                 v = v.replace("%2F", "/")
@@ -192,10 +191,14 @@ def iniciar_servidor_configuracion(wdt=None):
     pass_nuevo = ""
 
     while not guardado:
+        # Chequear el botón físico también en el bucle del portal
+        button_handler.chequear_boton(wdt)
+
         if wdt:
             wdt.feed()
+            
         try:
-            s.settimeout(2.0)
+            s.settimeout(1.0)
             conn, addr_client = s.accept()
         except OSError:
             continue
@@ -204,39 +207,40 @@ def iniciar_servidor_configuracion(wdt=None):
             wdt.feed()
         
         try:
+            conn.settimeout(2.0)
             request = conn.recv(1024).decode('utf-8')
-        except Exception:
-            conn.close()
-            continue
+            if not request:
+                conn.close()
+                continue
+                
+            # Determinar ruta y responder de forma protegida contra excepciones del socket
+            if "POST /save" in request:
+                params = parse_post_data(request)
+                ssid_nuevo = params.get("ssid", "")
+                pass_nuevo = params.get("password", "")
+                
+                if ssid_nuevo:
+                    import config
+                    try:
+                        with open(config.CONFIG_FILE, "w") as f:
+                            ujson.dump({"SSID": ssid_nuevo, "PASSWORD": pass_nuevo}, f)
+                        guardado = True
+                    except Exception as e:
+                        print("Error al guardar wifi_config.json:", e)
+                
+                conn.send('HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n')
+                conn.send(HTML_SUCCESS)
+            else:
+                conn.send('HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n')
+                conn.send(HTML_TEMPLATE)
+        except Exception as e:
+            print("Error procesando petición HTTP de configuración:", e)
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
-        if wdt:
-            wdt.feed()
-
-        # Determinar ruta
-        if "POST /save" in request:
-            params = parse_post_data(request)
-            ssid_nuevo = params.get("ssid", "")
-            pass_nuevo = params.get("password", "")
-            
-            if ssid_nuevo:
-                # Guardar en archivo JSON
-                import config
-                try:
-                    with open(config.CONFIG_FILE, "w") as f:
-                        ujson.dump({"SSID": ssid_nuevo, "PASSWORD": pass_nuevo}, f)
-                    guardado = True
-                except Exception as e:
-                    print("Error al guardar wifi_config.json:", e)
-            
-            conn.send('HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n')
-            conn.send(HTML_SUCCESS)
-        else:
-            conn.send('HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n')
-            conn.send(HTML_TEMPLATE)
-        
-        conn.close()
-
-    # Cerrar socket
     s.close()
     print("Credenciales recibidas. Reiniciando el dispositivo en 3 segundos...")
     time.sleep(3)

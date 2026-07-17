@@ -21,6 +21,7 @@ class Device(Base):
     resolution = Column(String, default="1920x1080", nullable=False)
     layout = Column(String, default="single", nullable=False)
     layout_config = Column(JSON, nullable=True) # ej. {"zone_a_height": 60, "zone_b_height": 40}
+    baud_rate = Column(Integer, default=9600, nullable=True)
     playlist_id = Column(Integer, ForeignKey("playlist.id", ondelete="SET NULL"), nullable=True)
     playlist_b_id = Column(Integer, ForeignKey("playlist.id", ondelete="SET NULL"), nullable=True)
     playlist_c_id = Column(Integer, ForeignKey("playlist.id", ondelete="SET NULL"), nullable=True)

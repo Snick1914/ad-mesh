@@ -25,6 +25,7 @@ class DeviceOut(BaseModel):
     resolution: str
     layout: str
     layout_config: Optional[Dict[str, Any]] = None
+    baud_rate: Optional[int] = 9600
     playlist_id: Optional[int]
     playlist_b_id: Optional[int]
     playlist_c_id: Optional[int]
@@ -36,6 +37,7 @@ class DeviceConfigUpdate(BaseModel):
     resolution: Optional[str] = None
     layout: Optional[str] = None
     layout_config: Optional[Dict[str, Any]] = None
+    baud_rate: Optional[int] = None
     playlist_id: Optional[int] = None
     playlist_b_id: Optional[int] = None
     playlist_c_id: Optional[int] = None

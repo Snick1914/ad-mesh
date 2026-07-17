@@ -229,6 +229,7 @@ async def update_device_configuration(
         resolution=payload.resolution,
         layout=payload.layout,
         layout_config=payload.layout_config,
+        baud_rate=payload.baud_rate,
         playlist_id=payload.playlist_id,
         playlist_b_id=payload.playlist_b_id,
         playlist_c_id=payload.playlist_c_id
@@ -240,6 +241,26 @@ async def update_device_configuration(
         )
     await manager.send_personal_message({"event": "sync_playlist"}, device.serial_number)
     return device
+
+@router.get("/config/{serial_number}")
+def get_device_config_by_serial(
+    serial_number: str,
+    db: Session = Depends(deps.get_db)
+):
+    """
+    Obtener configuración rápida del dispositivo (como el baud rate) para ESP32/reproductores.
+    """
+    service = DeviceService(db)
+    device = service.get_by_serial(serial_number)
+    if not device:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Dispositivo no encontrado."
+        )
+    return {
+        "serial_number": device.serial_number,
+        "baud_rate": device.baud_rate or 9600
+    }
 
 @router.delete("/{device_id}/unpair", response_model=DeviceOut)
 async def unpair_device(

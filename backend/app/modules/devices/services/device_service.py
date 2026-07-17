@@ -100,7 +100,7 @@ class DeviceService:
         self.db.refresh(device)
         return device
 
-    def update_device_config(self, device_id: int, user_id: int, resolution: str = None, layout: str = None, layout_config: dict = None, playlist_id: int = None, playlist_b_id: int = None, playlist_c_id: int = None) -> tuple[bool, str, Device]:
+    def update_device_config(self, device_id: int, user_id: int, resolution: str = None, layout: str = None, layout_config: dict = None, baud_rate: int = None, playlist_id: int = None, playlist_b_id: int = None, playlist_c_id: int = None) -> tuple[bool, str, Device]:
         device = self.get_by_id(device_id)
         if not device:
             return False, "Dispositivo no encontrado.", None
@@ -113,6 +113,8 @@ class DeviceService:
             device.layout = layout
         if layout_config is not None:
             device.layout_config = layout_config
+        if baud_rate is not None:
+            device.baud_rate = baud_rate
         
         device.playlist_id = playlist_id if playlist_id and playlist_id > 0 else None
         device.playlist_b_id = playlist_b_id if playlist_b_id and playlist_b_id > 0 else None

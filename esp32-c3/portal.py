@@ -157,8 +157,29 @@ HTML_SUCCESS = """<!DOCTYPE html>
 </html>
 """
 
+def url_decode(s):
+    """Decodifica caracteres especiales codificados en URL (%XX)."""
+    res = ""
+    i = 0
+    while i < len(s):
+        if s[i] == '%':
+            try:
+                char_code = int(s[i+1:i+3], 16)
+                res += chr(char_code)
+                i += 3
+            except Exception:
+                res += s[i]
+                i += 1
+        elif s[i] == '+':
+            res += ' '
+            i += 1
+        else:
+            res += s[i]
+            i += 1
+    return res
+
 def parse_post_data(request_str):
-    """Parsea los datos POST URL-encoded simplificados."""
+    """Parsea los datos POST URL-encoded de forma robusta."""
     try:
         parts = request_str.split("\r\n\r\n")
         if len(parts) < 2:
@@ -168,14 +189,11 @@ def parse_post_data(request_str):
         for pair in body.split("&"):
             if "=" in pair:
                 k, v = pair.split("=")
-                v = v.replace("+", " ")
-                v = v.replace("%21", "!").replace("%40", "@").replace("%23", "#").replace("%24", "$").replace("%25", "%")
-                v = v.replace("%5E", "^").replace("%26", "&").replace("%2A", "*").replace("%28", "(").replace("%29", ")")
-                v = v.replace("%2F", "/")
-                params[k] = v
+                params[k] = url_decode(v)
         return params
     except Exception:
         return {}
+
 
 def iniciar_servidor_configuracion(wdt=None):
     """Inicia el servidor web en el puerto 80 para configurar las credenciales."""
@@ -208,11 +226,49 @@ def iniciar_servidor_configuracion(wdt=None):
         
         try:
             conn.settimeout(2.0)
-            request = conn.recv(1024).decode('utf-8')
-            if not request:
+            request_bytes = b""
+            # 1. Leer cabeceras HTTP hasta el delimitador \r\n\r\n
+            while b"\r\n\r\n" not in request_bytes:
+                chunk = conn.recv(512)
+                if not chunk:
+                    break
+                request_bytes += chunk
+                if len(request_bytes) > 2048:
+                    break
+
+            if not request_bytes:
                 conn.close()
                 continue
+
+            request = request_bytes.decode('utf-8', 'ignore')
+
+            # 2. Si es una petición POST, asegurar la lectura completa del cuerpo usando Content-Length
+            if "POST" in request:
+                content_length = 0
+                for line in request.split("\r\n"):
+                    if line.lower().startswith("content-length:"):
+                        try:
+                            content_length = int(line.split(":")[1].strip())
+                        except Exception:
+                            pass
+                        break
                 
+                # Extraer cuerpo ya recibido
+                parts = request.split("\r\n\r\n")
+                cuerpo = parts[1] if len(parts) > 1 else ""
+                bytes_leidos = len(cuerpo.encode('utf-8'))
+                
+                # Leer bytes restantes
+                while bytes_leidos < content_length:
+                    chunk = conn.recv(min(content_length - bytes_leidos, 512))
+                    if not chunk:
+                        break
+                    cuerpo += chunk.decode('utf-8', 'ignore')
+                    bytes_leidos += len(chunk)
+                
+                # Reconstruir la petición HTTP completa
+                request = parts[0] + "\r\n\r\n" + cuerpo
+
             # Determinar ruta y responder de forma protegida contra excepciones del socket
             if "POST /save" in request:
                 params = parse_post_data(request)
@@ -225,6 +281,7 @@ def iniciar_servidor_configuracion(wdt=None):
                         with open(config.CONFIG_FILE, "w") as f:
                             ujson.dump({"SSID": ssid_nuevo, "PASSWORD": pass_nuevo}, f)
                         guardado = True
+                        print(f"Nueva red guardada con éxito. SSID: {ssid_nuevo}")
                     except Exception as e:
                         print("Error al guardar wifi_config.json:", e)
                 

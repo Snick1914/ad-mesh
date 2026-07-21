@@ -75,14 +75,23 @@ class DeviceService:
         self.db.refresh(device)
         return True, "Pantalla emparejada exitosamente.", device
 
-    def register_heartbeat(self, serial_number: str, ip_address: str = None, storage_used_gb: float = 0.0, status: str = "online") -> Device:
+    def register_heartbeat(self, serial_number: str, ip_address: str = None, storage_used_gb: float = 0.0, status: str = "online", linking_code: str = None) -> Device:
         device = self.get_by_serial(serial_number)
+        
+        # Buscar usuario por código de vinculación si se proporciona
+        db_user = None
+        if linking_code:
+            from app.models.user import User
+            db_user = self.db.query(User).filter(User.linking_code == linking_code).first()
+
         if not device:
-            # Si no existe, crear registro base inactivo (latido inicial de reproductor nuevo)
+            # Si no existe, crear registro base
             device = Device(
                 serial_number=serial_number,
                 status=status,
-                is_paired=False,
+                is_paired=True if db_user else False,
+                user_id=db_user.id if db_user else None,
+                name=f"Nodo {serial_number[-4:]}" if db_user else None,
                 ip_address=ip_address,
                 storage_used_gb=storage_used_gb,
                 last_heartbeat=datetime.datetime.now(datetime.timezone.utc)
@@ -94,6 +103,14 @@ class DeviceService:
                 device.ip_address = ip_address
             device.storage_used_gb = storage_used_gb
             device.last_heartbeat = datetime.datetime.now(datetime.timezone.utc)
+            
+            # Auto-vincular si viene un código de vinculación válido
+            if db_user:
+                device.is_paired = True
+                device.user_id = db_user.id
+                if not device.name:
+                    device.name = f"Nodo {serial_number[-4:]}"
+            
             self.db.add(device)
 
         self.db.commit()

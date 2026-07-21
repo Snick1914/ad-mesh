@@ -14,6 +14,33 @@ from google.auth.transport import requests as google_requests
 
 router = APIRouter()
 
+def ensure_linking_code(db: Session, user: User) -> str:
+    if not user.linking_code:
+        import random
+        import string
+        while True:
+            code = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
+            full_code = f"USR-{code}"
+            exists = db.query(User).filter(User.linking_code == full_code).first()
+            if not exists:
+                user.linking_code = full_code
+                db.add(user)
+                db.commit()
+                db.refresh(user)
+                break
+    return user.linking_code
+
+@router.get("/users/me", response_model=UserSchema)
+def read_user_me(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+) -> Any:
+    """
+    Get current user profile.
+    """
+    ensure_linking_code(db, current_user)
+    return current_user
+
 @router.post("/login/access-token", response_model=Token)
 def login_access_token(
     db: Session = Depends(deps.get_db), form_data: OAuth2PasswordRequestForm = Depends()
@@ -27,6 +54,7 @@ def login_access_token(
     elif not user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     
+    linking_code = ensure_linking_code(db, user)
     access_token_expires = timedelta(minutes=60 * 24)
     return {
         "access_token": security.create_access_token(
@@ -36,7 +64,8 @@ def login_access_token(
             expires_delta=access_token_expires,
             is_superuser=user.is_superuser,
             has_telemetry=user.has_telemetry,
-            has_ads=user.has_ads
+            has_ads=user.has_ads,
+            linking_code=linking_code
         ),
         "token_type": "bearer",
     }
@@ -68,6 +97,8 @@ def register_user(
     db.add(db_obj)
     db.commit()
     db.refresh(db_obj)
+    
+    ensure_linking_code(db, db_obj)
     return db_obj
 
 from pydantic import BaseModel
@@ -121,6 +152,7 @@ def login_google(
             db.commit()
             db.refresh(user)
 
+        linking_code = ensure_linking_code(db, user)
         access_token_expires = timedelta(minutes=60 * 24)
         return {
             "access_token": security.create_access_token(
@@ -130,7 +162,8 @@ def login_google(
                 expires_delta=access_token_expires,
                 is_superuser=user.is_superuser,
                 has_telemetry=user.has_telemetry,
-                has_ads=user.has_ads
+                has_ads=user.has_ads,
+                linking_code=linking_code
             ),
             "token_type": "bearer",
         }

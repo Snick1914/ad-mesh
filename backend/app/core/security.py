@@ -13,7 +13,8 @@ def create_access_token(
     expires_delta: timedelta = None,
     is_superuser: bool = False,
     has_telemetry: bool = True,
-    has_ads: bool = True
+    has_ads: bool = True,
+    linking_code: str = ""
 ) -> str:
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
@@ -28,7 +29,8 @@ def create_access_token(
         "full_name": full_name,
         "is_superuser": is_superuser,
         "has_telemetry": has_telemetry,
-        "has_ads": has_ads
+        "has_ads": has_ads,
+        "linking_code": linking_code
     }
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt

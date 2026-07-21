@@ -12,6 +12,7 @@ class UserBase(BaseModel):
     max_storage_gb: Optional[int] = 10
     has_telemetry: Optional[bool] = True
     has_ads: Optional[bool] = True
+    linking_code: Optional[str] = None
 
 class UserCreate(UserBase):
     email: EmailStr

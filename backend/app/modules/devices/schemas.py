@@ -55,6 +55,7 @@ class DeviceHeartbeat(BaseModel):
     ip_address: Optional[str] = None
     storage_used_gb: Optional[float] = 0.0
     status: Optional[str] = "online"
+    linking_code: Optional[str] = None
 
 class PairingCodeRequest(BaseModel):
     serial_number: str

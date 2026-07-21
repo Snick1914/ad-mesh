@@ -20,6 +20,9 @@ def main():
     # 1. Conectar a la red
     wifi_manager.conectar_wifi(wdt)
     
+    # Enviar heartbeat inicial para registrar/vincular el dispositivo inmediatamente
+    api_client.enviar_heartbeat(wdt)
+    
     # 2. Pedir configuración de baud rate de la API
     baud_rate = config.DEFAULT_BAUD_RATE
     server_baud = api_client.fetch_baud_rate(wdt)
@@ -58,10 +61,12 @@ def main():
         if not wifi_manager.esta_conectado():
             print("WiFi perdido, reconectando...")
             wifi_manager.conectar_wifi(wdt)
+            api_client.enviar_heartbeat(wdt)
 
         # 3. Enviar a la Base de Datos
         if wifi_manager.esta_conectado():
             api_client.enviar_telemetria(mediciones, wdt)
+            api_client.enviar_heartbeat(wdt)
         else:
             print("No se pudo enviar telemetría por falta de WiFi.")
 

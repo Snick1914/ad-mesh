@@ -11,6 +11,7 @@ export default function DashboardLayout() {
   let isSuperuser = false;
   let userName = 'Usuario ad-mesh';
   let userEmail = '';
+  let userLinkingCode = '';
   try {
     if (token) {
       const base64Url = token.split('.')[1];
@@ -27,6 +28,9 @@ export default function DashboardLayout() {
         }
         if (payload.email) {
           userEmail = payload.email;
+        }
+        if (payload.linking_code) {
+          userLinkingCode = payload.linking_code;
         }
       }
     }
@@ -224,6 +228,11 @@ export default function DashboardLayout() {
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-medium text-white">{userName}</p>
                 <p className="text-xs text-gray-400">{userEmail}</p>
+                {userLinkingCode && (
+                  <span className="text-[10px] text-[#00F0FF] bg-[#00F0FF]/15 border border-[#00F0FF]/30 px-2 py-0.5 rounded-full font-mono mt-1 inline-block">
+                    Vinc: {userLinkingCode}
+                  </span>
+                )}
               </div>
               <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/20">
                 <User className="w-5 h-5 text-gray-300" />

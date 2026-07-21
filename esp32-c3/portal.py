@@ -7,6 +7,7 @@ import button_handler
 HTML_TEMPLATE = """<!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Configuración WiFi - AD-Mesh</title>
     <style>
@@ -111,6 +112,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 <label for="password">Contraseña</label>
                 <input type="password" id="password" name="password" placeholder="••••••••" required>
             </div>
+            <div class="form-group">
+                <label for="linking_code">Código de Vinculación (Usuario)</label>
+                <input type="text" id="linking_code" name="linking_code" placeholder="Ej: USR-ABC12345" required>
+            </div>
             <button type="submit">Guardar y Conectar</button>
         </form>
         <div class="footer">ESP32-C3 Telemetry Node</div>
@@ -122,6 +127,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 HTML_SUCCESS = """<!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Configuración Guardada</title>
     <style>
@@ -274,14 +280,19 @@ def iniciar_servidor_configuracion(wdt=None):
                 params = parse_post_data(request)
                 ssid_nuevo = params.get("ssid", "")
                 pass_nuevo = params.get("password", "")
+                linking_code_nuevo = params.get("linking_code", "")
                 
                 if ssid_nuevo:
                     import config
                     try:
                         with open(config.CONFIG_FILE, "w") as f:
-                            ujson.dump({"SSID": ssid_nuevo, "PASSWORD": pass_nuevo}, f)
+                            ujson.dump({
+                                "SSID": ssid_nuevo,
+                                "PASSWORD": pass_nuevo,
+                                "LINKING_CODE": linking_code_nuevo
+                            }, f)
                         guardado = True
-                        print(f"Nueva red guardada con éxito. SSID: {ssid_nuevo}")
+                        print(f"Nueva red y código de vinculación guardados con éxito. SSID: {ssid_nuevo}, Code: {linking_code_nuevo}")
                     except Exception as e:
                         print("Error al guardar wifi_config.json:", e)
                 

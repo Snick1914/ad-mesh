@@ -116,7 +116,8 @@ def player_heartbeat(
         serial_number=serial_number,
         ip_address=payload.ip_address,
         storage_used_gb=payload.storage_used_gb,
-        status=payload.status
+        status=payload.status,
+        linking_code=payload.linking_code
     )
 
 def _serialize_playlist_helper(playlist_id: int | None, db: Session):

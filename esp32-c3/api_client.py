@@ -48,3 +48,39 @@ def enviar_telemetria(mediciones, wdt=None):
         if wdt:
             wdt.feed()
         return False
+
+def enviar_heartbeat(wdt=None):
+    """
+    Envía un latido de vida y registra/vincula el dispositivo con su código de vinculación.
+    """
+    try:
+        import wifi_manager
+        import network
+        import urequests
+        linking_code = wifi_manager.obtener_codigo_vinculacion()
+        
+        payload = {
+            "ip_address": "127.0.0.1",
+            "storage_used_gb": 0.0,
+            "status": "online"
+        }
+        if linking_code:
+            payload["linking_code"] = linking_code
+
+        wlan = network.WLAN(network.STA_IF)
+        if wlan.isconnected():
+            payload["ip_address"] = wlan.ifconfig()[0]
+
+        url = f"{config.API_BASE_URL}/devices/{config.DEVICE_SERIAL}/heartbeat"
+        headers = {"Content-Type": "application/json"}
+        
+        res = urequests.post(url, json=payload, headers=headers, timeout=10)
+        res.close()
+        if wdt:
+            wdt.feed()
+        return True
+    except Exception as e:
+        print("Error enviando heartbeat de dispositivo:", e)
+        if wdt:
+            wdt.feed()
+        return False

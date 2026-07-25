@@ -51,6 +51,50 @@ def enviar_telemetria(mediciones, wdt=None):
         return False
 
 
+def enviar_iot_metrics(mediciones, wdt=None):
+    """
+    Envía las lecturas al módulo IoT (Sensores + Alertas) del backend.
+    Si el sensor no existe aún, se auto-registra y se vincula a la cuenta
+    dueña del código de vinculación guardado en el ESP32.
+    """
+    try:
+        import wifi_manager
+        linking_code = wifi_manager.obtener_codigo_vinculacion()
+
+        metrics = []
+        metrics_map = getattr(config, "IOT_METRICS_MAP", {})
+        for key, (label, unit) in metrics_map.items():
+            value = mediciones.get(key)
+            if value is not None:
+                metrics.append({"name": label, "value": value, "unit": unit})
+
+        if not metrics:
+            return False
+
+        payload = {
+            "metrics": metrics,
+            "name": getattr(config, "SENSOR_NAME", config.DEVICE_SERIAL),
+            "location": getattr(config, "SENSOR_LOCATION", None),
+            "type": getattr(config, "SENSOR_TYPE", "environmental"),
+        }
+        if linking_code:
+            payload["linking_code"] = linking_code
+
+        sensor_code = getattr(config, "SENSOR_CODE", config.DEVICE_SERIAL)
+        url = f"{config.API_BASE_URL}/iot/sensors/{sensor_code}/ingest"
+        headers = {"Content-Type": "application/json"}
+        res = urequests.post(url, json=payload, headers=headers, timeout=10)
+        res.close()
+        if wdt:
+            wdt.feed()
+        return True
+    except Exception as e:
+        print("Error enviando métricas IoT:", e)
+        if wdt:
+            wdt.feed()
+        return False
+
+
 def enviar_heartbeat(wdt=None):
     """
     Envía un latido de vida al backend y registra/vincula el dispositivo.

@@ -85,6 +85,8 @@ def main():
         # --- Enviar telemetría ---
         if wifi_manager.esta_conectado():
             api_client.enviar_telemetria(mediciones, wdt)
+            if success:
+                api_client.enviar_iot_metrics(mediciones, wdt)
             api_client.enviar_heartbeat(wdt)
         else:
             print("Sin WiFi – telemetría no enviada.")

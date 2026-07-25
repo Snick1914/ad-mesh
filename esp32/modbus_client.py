@@ -1,5 +1,19 @@
 import time
 import config
+from machine import Pin
+
+_re_de = None
+
+
+def _get_re_de():
+    global _re_de
+    pin_num = getattr(config, "RE_DE_PIN", None)
+    if pin_num is None:
+        return None
+    if _re_de is None:
+        _re_de = Pin(pin_num, Pin.OUT)
+        _re_de.value(0)  # iniciar en RX
+    return _re_de
 
 
 def crc16(data):
@@ -44,29 +58,36 @@ def leer_modbus(uart, slave_id, start_reg, count, wdt=None, function_code=4):
     peticion += crc16(peticion)
 
     try:
+        re_de = _get_re_de()
+
         # Limpiar residuos previos del buffer
         while uart.any():
             uart.read(1)
 
-        # Enviar petición
+        # Enviar petición (activar driver RS485 antes de transmitir)
+        if re_de:
+            re_de.value(1)
         uart.write(peticion)
+        if re_de:
+            time.sleep_ms(12)   # asegurar transmisión completa antes de soltar el bus
+            re_de.value(0)
 
-        # Esperar respuesta con timeout
-        timeout_ms = getattr(config, "TIMEOUT_MS", 200)
+        # Esperar respuesta con timeout, acumulando por si llega en varios trozos
+        timeout_ms = getattr(config, "TIMEOUT_MS", 800)
+        min_bytes = 5 + (2 * count)
+        respuesta = b""
         inicio = time.ticks_ms()
-        while not uart.any():
-            if time.ticks_diff(time.ticks_ms(), inicio) > timeout_ms:
-                return False, "Timeout de respuesta UART"
+        while time.ticks_diff(time.ticks_ms(), inicio) < timeout_ms:
+            if uart.any():
+                respuesta += uart.read()
+                if len(respuesta) >= min_bytes:
+                    break
             time.sleep_ms(5)
             if wdt:
                 wdt.feed()
 
-        # Tiempo de asentamiento para recibir la trama completa
-        time.sleep_ms(15)
-
-        respuesta = uart.read()
         if not respuesta:
-            return False, "Sin datos en buffer"
+            return False, "Timeout de respuesta UART"
 
         if len(respuesta) < 5:
             return False, "Trama incompleta"

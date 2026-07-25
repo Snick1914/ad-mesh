@@ -58,64 +58,6 @@ interface FiredAlert {
 }
 
 // ────────────────────────────────────────────────────
-// INITIAL DATA
-// ────────────────────────────────────────────────────
-const INITIAL_SENSORS: SensorDevice[] = [
-  {
-    id: 'MT-942-A',
-    name: 'Sensor Compresores Principal',
-    location: 'Área de Compresores y Neumática',
-    type: 'fluids',
-    status: 'online',
-    lastSeen: 'Justo ahora',
-    metrics: [
-      { name: 'Presión de Aire',    value: 42.5,  unit: 'PSI',   status: 'normal', trend: 'stable' },
-      { name: 'Temperatura Cabezal',value: 68.2,  unit: '°C',    status: 'normal', trend: 'up'     },
-      { name: 'Caudal de Salida',   value: 120.4, unit: 'L/min', status: 'normal', trend: 'up'     }
-    ]
-  },
-  {
-    id: 'PWR-88-B',
-    name: 'Analizador Red Subestación',
-    location: 'Tablero General de Fuerza',
-    type: 'electrical',
-    status: 'online',
-    lastSeen: 'Hace 5 seg',
-    metrics: [
-      { name: 'Consumo Eléctrico', value: 12.4,  unit: 'kW', status: 'normal', trend: 'down'   },
-      { name: 'Voltaje L1-L2',     value: 220.8, unit: 'V',  status: 'normal', trend: 'stable' },
-      { name: 'Factor de Potencia',value: 0.94,  unit: 'FP', status: 'normal', trend: 'stable' }
-    ]
-  },
-  {
-    id: 'ENV-101-C',
-    name: 'Monitor Ambiental Almacén',
-    location: 'Almacén de Materia Prima',
-    type: 'environmental',
-    status: 'online',
-    lastSeen: 'Hace 2 min',
-    metrics: [
-      { name: 'Temperatura Ambiente', value: 24.8, unit: '°C',    status: 'normal', trend: 'up'     },
-      { name: 'Humedad Relativa',     value: 58.5, unit: '% HR',  status: 'normal', trend: 'stable' },
-      { name: 'Nivel CO2',            value: 420,  unit: 'ppm',   status: 'normal', trend: 'stable' }
-    ]
-  },
-  {
-    id: 'ENV-202-F',
-    name: 'Cámara Fría Lácteos',
-    location: 'Andén de Congelados',
-    type: 'environmental',
-    status: 'online',
-    lastSeen: 'Justo ahora',
-    metrics: [
-      { name: 'Temperatura Interna', value: 8.4,  unit: '°C',   status: 'warning', trend: 'up'   },
-      { name: 'Humedad Relativa',    value: 82.1, unit: '% HR', status: 'normal',  trend: 'down' },
-      { name: 'Puerta Abierta',      value: 1,    unit: 'Estado',status: 'warning', trend: 'stable'}
-    ]
-  }
-];
-
-// ────────────────────────────────────────────────────
 // HELPERS
 // ────────────────────────────────────────────────────
 const conditionLabel: Record<AlertCondition, string> = {
@@ -125,15 +67,6 @@ const conditionLabel: Record<AlertCondition, string> = {
   lte: 'Menor o igual (≤)'
 };
 const conditionSymbol: Record<AlertCondition, string> = { gt: '>', lt: '<', gte: '≥', lte: '≤' };
-
-function evalCondition(value: number, condition: AlertCondition, threshold: number): boolean {
-  switch (condition) {
-    case 'gt':  return value >  threshold;
-    case 'lt':  return value <  threshold;
-    case 'gte': return value >= threshold;
-    case 'lte': return value <= threshold;
-  }
-}
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -557,7 +490,13 @@ export default function IotTelemetry() {
                 </div>
               );
             })}
-            {filteredSensors.length === 0 && (
+            {isLoading && (
+              <div className="text-center py-8 bg-[#161C2D]/40 border border-white/5 rounded-2xl">
+                <RefreshCw className="w-8 h-8 text-gray-600 mx-auto mb-2 animate-spin" />
+                <p className="text-sm text-gray-400 font-semibold">Cargando sensores…</p>
+              </div>
+            )}
+            {!isLoading && filteredSensors.length === 0 && (
               <div className="text-center py-8 bg-[#161C2D]/40 border border-white/5 rounded-2xl">
                 <Cpu className="w-10 h-10 text-gray-600 mx-auto mb-2" />
                 <p className="text-sm text-gray-400 font-semibold">No se encontraron sensores</p>

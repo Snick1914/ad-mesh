@@ -109,11 +109,19 @@ async def ingest_sensor_metrics(
     db: Session = Depends(deps.get_db)
 ):
     """
-    Invocado por el dispositivo IoT físico (sin auth de usuario) para reportar lecturas.
+    Invocado por el ESP32/dispositivo IoT físico (sin auth de usuario) para reportar lecturas.
+    Si trae `linking_code` (el mismo código de vinculación de Ajustes de Cuenta usado para
+    emparejar pantallas), el sensor se auto-registra y vincula a esa cuenta.
     Evalúa reglas de alerta y transmite en vivo al dashboard vía WebSocket.
     """
     service = IotService(db)
-    sensor, fired_alerts = service.ingest_metrics(sensor_code, payload.metrics)
+    sensor, fired_alerts = service.ingest_metrics(
+        sensor_code, payload.metrics,
+        linking_code=payload.linking_code,
+        name=payload.name,
+        location=payload.location,
+        type=payload.type
+    )
     if not sensor:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sensor no encontrado.")
 

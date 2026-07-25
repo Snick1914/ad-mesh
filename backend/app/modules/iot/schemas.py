@@ -42,6 +42,10 @@ class IotSensorOut(BaseModel):
 
 class SensorIngest(BaseModel):
     metrics: List[SensorMetric]
+    linking_code: Optional[str] = None  # código de vinculación del usuario, escrito en el ESP32
+    name: Optional[str] = None          # usado solo si el sensor no existe aún (auto-registro)
+    location: Optional[str] = None
+    type: Optional[SensorType] = None
 
 
 class AlertRuleCreate(BaseModel):

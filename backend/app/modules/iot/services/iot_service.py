@@ -107,14 +107,43 @@ class IotService:
             .limit(limit).all()
 
     # ── Ingest + evaluation engine ─────────────────────
-    def ingest_metrics(self, sensor_code: str, metrics: list[SensorMetric]) -> tuple[IotSensor, list[FiredAlert]]:
+    def ingest_metrics(
+        self,
+        sensor_code: str,
+        metrics: list[SensorMetric],
+        linking_code: str = None,
+        name: str = None,
+        location: str = None,
+        type: str = None
+    ) -> tuple[IotSensor, list[FiredAlert]]:
         """
-        Recibe lecturas de un sensor físico (sin auth, llamado por el dispositivo IoT).
+        Recibe lecturas de un sensor físico (sin auth, llamado por el ESP32/dispositivo IoT).
+        Si el sensor no existe, lo crea. Si trae linking_code, lo vincula a la cuenta del
+        usuario dueño de ese código (mismo mecanismo que el emparejamiento de pantallas).
         Actualiza estado, evalúa reglas de alerta activas, y persiste alertas disparadas.
         """
         sensor = self.get_by_code(sensor_code)
+
+        db_user = None
+        if linking_code:
+            from app.models.user import User
+            db_user = self.db.query(User).filter(User.linking_code == linking_code).first()
+
         if not sensor:
-            return None, []
+            sensor = IotSensor(
+                sensor_code=sensor_code.upper(),
+                name=name or f"Sensor {sensor_code[-4:]}",
+                location=location,
+                type=type or "environmental",
+                status="online",
+                user_id=db_user.id if db_user else None,
+                last_seen=datetime.datetime.utcnow(),
+                metrics=[]
+            )
+            self.db.add(sensor)
+        elif db_user and not sensor.user_id:
+            # Auto-vincular si aún no tenía dueño y llega un código de vinculación válido
+            sensor.user_id = db_user.id
 
         sensor.metrics = [m.model_dump() for m in metrics]
         sensor.status = "online"

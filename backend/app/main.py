@@ -10,6 +10,7 @@ from app.models.user import User # Import models to ensure they are registered w
 from app.modules.devices.models import Device
 from app.modules.media.models import Media
 from app.modules.playlists.models import Playlist, PlaylistItem
+from app.modules.iot.models import IotSensor, AlertRule, FiredAlert
 
 Base.metadata.create_all(bind=engine)
 

@@ -2,9 +2,19 @@
 # Script de compilación de firmware a MicroPython bytecode (.mpy)
 
 # Directorios
-SRC_DIR="/home/snick/Proyectos/Roberto Olmos/ad-mesh/esp32-c3"
+SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DIST_DIR="$SRC_DIR/dist"
-MPY_CROSS="/home/snick/.local/bin/mpy-cross"
+
+# Buscar mpy-cross en el sistema o rutas por defecto
+if [ -f "$SRC_DIR/.venv-build/bin/mpy-cross" ]; then
+    MPY_CROSS="$SRC_DIR/.venv-build/bin/mpy-cross"
+elif command -v mpy-cross &> /dev/null; then
+    MPY_CROSS="mpy-cross"
+elif [ -f "$HOME/.local/bin/mpy-cross" ]; then
+    MPY_CROSS="$HOME/.local/bin/mpy-cross"
+else
+    MPY_CROSS="/home/sistemas/.local/bin/mpy-cross"
+fi
 
 echo "=== Iniciando compilación de firmware ==="
 
@@ -21,7 +31,7 @@ FILES_TO_COMPILE=("config" "button_handler" "wifi_manager" "modbus_client" "api_
 
 for file in "${FILES_TO_COMPILE[@]}"; do
     echo "Compilando: $file.py -> $file.mpy"
-    $MPY_CROSS "$SRC_DIR/$file.py" -o "$DIST_DIR/$file.mpy"
+    "$MPY_CROSS" "$SRC_DIR/$file.py" -o "$DIST_DIR/$file.mpy"
     if [ $? -ne 0 ]; then
         echo "Error compilando $file.py"
         exit 1

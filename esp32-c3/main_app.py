@@ -32,9 +32,12 @@ def main():
     else:
         print(f"Usando baud rate por defecto: {baud_rate}")
         
-    # 3. Inicializar UART
-    uart = UART(1, baudrate=baud_rate, tx=config.TX_PIN, rx=config.RX_PIN, bits=8, parity=None, stop=1)
-    print(f"UART Modbus inicializado a {baud_rate} bps")
+    # 3. Inicializar UART usando objetos Pin y .init() (evita bugs de mapeo en ESP32-S3)
+    from machine import Pin
+    uart_id = getattr(config, "UART_ID", 1)
+    uart = UART(uart_id, baudrate=baud_rate)
+    uart.init(tx=Pin(config.TX_PIN), rx=Pin(config.RX_PIN), baudrate=baud_rate, bits=8, parity=None, stop=1, timeout=50)
+    print(f"UART Modbus ({uart_id}) inicializado en pines TX={config.TX_PIN}, RX={config.RX_PIN} a {baud_rate} bps")
     
     while True:
         wdt.feed()  # Alimentar Watchdog al inicio de cada ciclo
@@ -46,12 +49,18 @@ def main():
         gc.collect()
         
         # 1. Leer Modbus
-        success, result = modbus_client.leer_modbus(uart, config.SLAVE_ID, 0, 2, wdt)
+        func_code = getattr(config, "FUNCTION_CODE", 3)
+        success, result = modbus_client.leer_modbus(uart, config.SLAVE_ID, 0, 2, wdt, function_code=func_code)
         mediciones = {}
         if success:
-            mediciones["sensor_temperatura"] = result[0] / 10.0
-            mediciones["sensor_humedad"] = result[1] / 10.0
+            eu_factor = getattr(config, "EU_FACTOR", 10.0)
+            mediciones["temp1"] = result[0] / eu_factor
+            mediciones["temp2"] = result[1] / eu_factor
+            # Claves adicionales por compatibilidad con el backend previo
+            mediciones["sensor_temperatura"] = result[0] / eu_factor
+            mediciones["sensor_humedad"] = result[1] / eu_factor
             mediciones["modbus_status"] = "OK"
+            print(f">>> VIN0/Temp1: {mediciones['temp1']} °C | VIN1/Temp2: {mediciones['temp2']} °C")
         else:
             mediciones["modbus_status"] = "ERROR"
             mediciones["error_msg"] = result

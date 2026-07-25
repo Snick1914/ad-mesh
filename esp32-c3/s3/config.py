@@ -21,4 +21,5 @@ BUTTON_PIN = 7  # Pin de botón asignado a GPIO7
 AP_SSID = "AD-Mesh_config"
 CONFIG_FILE = "wifi_config.json"
 
-
+# LED RGB de estado (WS2812 integrado en la placa ESP32-S3)
+RGB_PIN = 21

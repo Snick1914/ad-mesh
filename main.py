@@ -32,6 +32,12 @@ def inicializar_uart():
 
 uart = inicializar_uart()
 
+# Pin de control de dirección RS485 (RE/DE) — el módulo TTL no es automático
+re_de_pin = getattr(config, "RE_DE_PIN", None)
+re_de = Pin(re_de_pin, Pin.OUT) if re_de_pin is not None else None
+if re_de:
+    re_de.value(0)  # iniciar en modo recepción
+
 # ============================================================================
 # SINCRONIZACIÓN DE TIEMPO (NTP)
 # ============================================================================
@@ -111,27 +117,31 @@ def leer_registro_input(start_address):
         0x00, 0x02  # Siempre leemos 2 registros (4 bytes para flotante de 32 bits)
     ])
     payload += calcular_crc(payload)
-    
-    # Enviar consulta
+
+    # Enviar consulta (activar driver RS485 antes de transmitir)
+    if re_de:
+        re_de.value(1)
     uart.write(payload)
-    
-    # Esperar respuesta con timeout sin bloquear la CPU
+    if re_de:
+        time.sleep_ms(12)  # asegurar transmisión completa antes de soltar el bus
+        re_de.value(0)
+
+    # Esperar respuesta con timeout, acumulando por si llega en varios trozos
+    respuesta = b""
     inicio = time.ticks_ms()
-    while not uart.any():
-        if time.ticks_diff(time.ticks_ms(), inicio) > config.TIMEOUT_MS:
-            return None
+    while time.ticks_diff(time.ticks_ms(), inicio) < config.TIMEOUT_MS:
+        if uart.any():
+            respuesta += uart.read()
+            if len(respuesta) >= 9:
+                break
         time.sleep_ms(5)
-        
-    # Tiempo mínimo de asentamiento de la trama Modbus RTU
-    time.sleep_ms(15)
-    respuesta = uart.read()
-    
+
     # Validación básica de tamaño y protocolo
-    if respuesta is None or len(respuesta) < 9:
+    if not respuesta or len(respuesta) < 9:
         return None
     if respuesta[0] != config.SLAVE_ID or respuesta[1] != 0x04:
         return None
-        
+
     # Retorna solo los 4 bytes correspondientes a los datos leídos
     return respuesta[3:7]
 
@@ -243,6 +253,31 @@ while True:
         res.close() # Liberar sockets
     except Exception as e:
         print("[HTTP] Error al enviar telemetría a la API:", e)
+
+    # 6b. Registrar/actualizar el sensor en el módulo IoT (Sensores + Alertas).
+    # Se reporta SIEMPRE, aunque el medidor aún no esté cableado, para que el
+    # sensor aparezca vinculado a la cuenta desde el primer arranque; las
+    # métricas se van llenando solas en cuanto el Modbus empiece a responder.
+    try:
+        metrics = []
+        for key, (label, unit) in config.IOT_METRICS_MAP.items():
+            value = telemetria_payload["mediciones"].get(key)
+            if value is not None:
+                metrics.append({"name": label, "value": value, "unit": unit})
+
+        iot_payload = {
+            "metrics": metrics,
+            "name": config.SENSOR_NAME,
+            "location": config.SENSOR_LOCATION,
+            "type": config.SENSOR_TYPE,
+            "linking_code": getattr(config, "LINKING_CODE", None)
+        }
+        url_iot = f"https://api.ad-mesh.com/api/v1/iot/sensors/{config.SENSOR_CODE}/ingest"
+        res_iot = urequests.post(url_iot, json=iot_payload, headers=headers)
+        print(f"[HTTP] IoT ingest enviado. Estado API: {res_iot.status_code}")
+        res_iot.close()
+    except Exception as e:
+        print("[HTTP] Error al enviar métricas IoT:", e)
 
     # 7. Temporizador Inteligente con alimentación constante del Watchdog
     tiempo_transcurrido = time.ticks_diff(time.ticks_ms(), inicio_ciclo)

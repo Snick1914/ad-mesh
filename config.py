@@ -23,13 +23,32 @@ MQTT_WS_PATH = "/mqtt" # Ruta del proxy websocket en Nginx Proxy Manager
 CLIENT_ID = "ESP32_MEDIDOR_001"
 TOPIC_TELEMETRIA = b"telemetria/cliente_01/medidor_001"
 
+# Código de vinculación de la cuenta (Ajustes > "Vinc: XXXX" en el dashboard).
+# Al mandarlo en el ingest, el sensor se auto-registra y queda ligado a esa cuenta.
+LINKING_CODE = "USR-9MOOSBPC"
+
+# Módulo IoT (Sensores + Alertas) — métricas que se reportan al dashboard
+SENSOR_CODE = CLIENT_ID
+SENSOR_NAME = "Medidor Eastron SMART X96-5"
+SENSOR_LOCATION = "Tablero General de Fuerza"
+SENSOR_TYPE = "electrical"
+IOT_METRICS_MAP = {
+    "voltaje_promedio":  ("Voltaje Promedio", "V"),
+    "corriente_total":   ("Corriente Total", "A"),
+    "potencia_total":    ("Potencia Total", "kW"),
+    "factor_potencia_total": ("Factor de Potencia", "FP"),
+    "frecuencia":        ("Frecuencia", "Hz"),
+}
+
 # Configuración de RS485 / Modbus RTU
+# El módulo RS485-TTL requiere control manual del pin RE/DE (no es automático).
 UART_PORT = 2
 BAUDRATE = 9600
-TX_PIN = 16
-RX_PIN = 17
+TX_PIN = 17
+RX_PIN = 16
+RE_DE_PIN = 4
 SLAVE_ID = 0x01
-TIMEOUT_MS = 200
+TIMEOUT_MS = 800
 
 # Registros Modbus Input del medidor Eastron SMART X96-5 (Formato float32, 2 registros por lectura)
 EASTRON_REGISTERS = {

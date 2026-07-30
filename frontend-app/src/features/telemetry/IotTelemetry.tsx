@@ -136,7 +136,8 @@ function mapApiSensor(s: any): SensorDevice {
     metrics: (s.metrics || []).map((m: any) => {
       let val = m.value;
       let unit = m.unit;
-      if (s.temperature_unit === 'F' && (m.name.toLowerCase().includes('temp') || m.unit.includes('C'))) {
+      const name = m.name || '';
+      if (s.temperature_unit === 'F' && (name.toLowerCase().includes('temp') || (unit || '').includes('C'))) {
         val = Number((m.value * 1.8 + 32).toFixed(1));
         unit = '°F';
       }
@@ -304,12 +305,17 @@ export default function IotTelemetry() {
   useEffect(() => {
     (async () => {
       setIsLoading(true);
-      const byId = await loadSensors();
-      if (byId) {
-        await loadRules(byId);
-        await loadAlerts(byId);
+      try {
+        const byId = await loadSensors();
+        if (byId) {
+          await loadRules(byId);
+          await loadAlerts(byId);
+        }
+      } catch (err) {
+        console.error('Error cargando datos de telemetría:', err);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     })();
   }, [loadSensors, loadRules, loadAlerts]);
 

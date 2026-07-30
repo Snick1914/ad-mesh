@@ -13,6 +13,7 @@ from app.modules.iot.schemas import (
     IotSensorConfigUpdate
 )
 from app.modules.iot.services.iot_service import IotService
+from app.modules.iot.models import IotSensor
 
 router = APIRouter()
 

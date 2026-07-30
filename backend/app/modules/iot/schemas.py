@@ -24,6 +24,8 @@ class IotSensorCreate(BaseModel):
     location: Optional[str] = None
     type: SensorType = "environmental"
     metrics: Optional[List[SensorMetric]] = None
+    send_interval_seconds: Optional[int] = 300
+    baud_rate: Optional[int] = 9600
 
 
 class IotSensorOut(BaseModel):
@@ -35,9 +37,16 @@ class IotSensorOut(BaseModel):
     status: str
     last_seen: Optional[datetime]
     metrics: Optional[List[SensorMetric]] = None
+    send_interval_seconds: int
+    baud_rate: Optional[int]
 
     class Config:
         from_attributes = True
+
+
+class IotSensorConfigUpdate(BaseModel):
+    send_interval_seconds: int
+    baud_rate: Optional[int] = None
 
 
 class SensorIngest(BaseModel):

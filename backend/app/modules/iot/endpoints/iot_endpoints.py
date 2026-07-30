@@ -6,7 +6,8 @@ from app.api import deps
 from app.models.user import User
 from app.modules.iot.schemas import (
     IotSensorOut, IotSensorCreate, SensorIngest,
-    AlertRuleOut, AlertRuleCreate, FiredAlertOut
+    AlertRuleOut, AlertRuleCreate, FiredAlertOut,
+    IotSensorConfigUpdate
 )
 from app.modules.iot.services.iot_service import IotService
 
@@ -100,6 +101,41 @@ def delete_sensor(
     if not service.delete_sensor(sensor_id, current_user.id):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Sensor no encontrado o sin permisos.")
     return {"status": "success", "message": "Sensor eliminado con éxito."}
+
+
+@router.get("/sensors/config/{sensor_code}")
+def get_sensor_config(
+    sensor_code: str,
+    db: Session = Depends(deps.get_db)
+):
+    service = IotService(db)
+    sensor = service.get_by_code(sensor_code)
+    if not sensor:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sensor no encontrado.")
+    return {
+        "sensor_code": sensor.sensor_code,
+        "baud_rate": sensor.baud_rate or 9600,
+        "send_interval_seconds": sensor.send_interval_seconds or 300
+    }
+
+
+@router.put("/sensors/{sensor_id}/config", response_model=IotSensorOut)
+def update_sensor_configuration(
+    sensor_id: int,
+    payload: IotSensorConfigUpdate,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    service = IotService(db)
+    success, message, sensor = service.update_sensor_config(
+        sensor_id=sensor_id,
+        user_id=current_user.id,
+        send_interval_seconds=payload.send_interval_seconds,
+        baud_rate=payload.baud_rate
+    )
+    if not success:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=message)
+    return sensor
 
 
 @router.post("/sensors/{sensor_code}/ingest", response_model=IotSensorOut)

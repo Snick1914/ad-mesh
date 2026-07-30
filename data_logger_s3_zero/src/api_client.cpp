@@ -9,13 +9,13 @@
 
 namespace ApiClient {
 
-bool fetchBaudRate(uint32_t &baudOut) {
+bool fetchConfig(uint32_t &baudOut, uint32_t &intervalOut) {
     if (!WifiManager::estaConectado()) return false;
 
     WiFiClientSecure client;
     client.setInsecure();
     HTTPClient http;
-    String url = String(API_BASE_URL) + "/devices/config/" + getDeviceSerial();
+    String url = String(API_BASE_URL) + "/iot/sensors/config/" + getDeviceSerial();
     http.setTimeout(HTTP_TIMEOUT_MS);
     http.begin(client, url);
 
@@ -25,14 +25,19 @@ bool fetchBaudRate(uint32_t &baudOut) {
     if (code == 200) {
         JsonDocument doc;
         DeserializationError err = deserializeJson(doc, http.getStream());
-        if (!err && doc["baud_rate"].is<long>()) {
-            baudOut = doc["baud_rate"].as<uint32_t>();
-            ok = baudOut > 0;
+        if (!err) {
+            if (doc["baud_rate"].is<long>()) {
+                baudOut = doc["baud_rate"].as<uint32_t>();
+            }
+            if (doc["send_interval_seconds"].is<long>()) {
+                intervalOut = doc["send_interval_seconds"].as<uint32_t>();
+            }
+            ok = true;
         }
     } else if (code > 0) {
-        Serial.printf("[API] fetch_baud_rate HTTP %d\n", code);
+        Serial.printf("[API] fetchConfig HTTP %d\n", code);
     } else {
-        Serial.printf("[API] Error obteniendo baud rate: %s\n", http.errorToString(code).c_str());
+        Serial.printf("[API] Error obteniendo config: %s\n", http.errorToString(code).c_str());
     }
 
     http.end();
@@ -45,15 +50,34 @@ bool enviarTelemetria(const std::map<String, float> &medicionesNumericas,
     if (!WifiManager::estaConectado()) return false;
 
     JsonDocument doc;
-    doc["device_serial"] = getDeviceSerial();
-    JsonObject mediciones = doc["mediciones"].to<JsonObject>();
+    JsonArray metrics = doc["metrics"].to<JsonArray>();
+
+    // Agregar estado de modbus como métrica
+    JsonObject mStatus = metrics.add<JsonObject>();
+    mStatus["name"] = "modbus_status";
+    mStatus["value"] = (modbusStatus == "OK") ? 1.0f : 0.0f;
+    mStatus["unit"] = "status";
+
+    // Agregar las demás mediciones
     for (const auto &kv : medicionesNumericas) {
-        mediciones[kv.first] = kv.second;
+        JsonObject m = metrics.add<JsonObject>();
+        m["name"] = kv.first;
+        m["value"] = kv.second;
+        if (kv.first.indexOf("temp") >= 0 || kv.first.indexOf("temperatura") >= 0) {
+            m["unit"] = "C";
+        } else if (kv.first.indexOf("hum") >= 0 || kv.first.indexOf("humedad") >= 0) {
+            m["unit"] = "%";
+        } else {
+            m["unit"] = "";
+        }
     }
-    mediciones["modbus_status"] = modbusStatus;
-    if (errorMsg.length() > 0) {
-        mediciones["error_msg"] = errorMsg;
+
+    String linkingCode = WifiManager::obtenerCodigoVinculacion();
+    if (linkingCode.length() > 0) {
+        doc["linking_code"] = linkingCode;
     }
+    doc["type"] = "electrical";
+    doc["name"] = "Nodo " + getDeviceSerial().substring(getDeviceSerial().length() - 4);
 
     String payload;
     serializeJson(doc, payload);
@@ -61,7 +85,7 @@ bool enviarTelemetria(const std::map<String, float> &medicionesNumericas,
     WiFiClientSecure client;
     client.setInsecure();
     HTTPClient http;
-    String url = String(API_BASE_URL) + "/telemetry/";
+    String url = String(API_BASE_URL) + "/iot/sensors/" + getDeviceSerial() + "/ingest";
     http.setTimeout(HTTP_TIMEOUT_MS);
     http.begin(client, url);
     http.addHeader("Content-Type", "application/json");
@@ -77,39 +101,8 @@ bool enviarTelemetria(const std::map<String, float> &medicionesNumericas,
 }
 
 bool enviarHeartbeat() {
-    JsonDocument doc;
-    doc["ip_address"] = "127.0.0.1";
-    doc["storage_used_gb"] = 0.0;
-    doc["status"] = "online";
-
-    String linkingCode = WifiManager::obtenerCodigoVinculacion();
-    if (linkingCode.length() > 0) {
-        doc["linking_code"] = linkingCode;
-    }
-
-    if (WifiManager::estaConectado()) {
-        doc["ip_address"] = WiFi.localIP().toString();
-    }
-
-    String payload;
-    serializeJson(doc, payload);
-
-    WiFiClientSecure client;
-    client.setInsecure();
-    HTTPClient http;
-    String url = String(API_BASE_URL) + "/devices/" + getDeviceSerial() + "/heartbeat";
-    http.setTimeout(HTTP_TIMEOUT_MS);
-    http.begin(client, url);
-    http.addHeader("Content-Type", "application/json");
-
-    int code = http.POST(payload);
-    if (code <= 0) {
-        Serial.printf("[API] Error enviando heartbeat: %s\n", http.errorToString(code).c_str());
-    }
-
-    http.end();
-    esp_task_wdt_reset();
-    return code > 0;
+    std::map<String, float> medicionesVacias;
+    return enviarTelemetria(medicionesVacias, "OK", "");
 }
 
 String getDeviceSerial() {

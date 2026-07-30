@@ -15,6 +15,8 @@ class IotSensor(Base):
     user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), nullable=True, index=True)
     last_seen = Column(DateTime, nullable=True)
     metrics = Column(JSON, nullable=True)  # lista de {name, value, unit, status, trend}
+    send_interval_seconds = Column(Integer, default=300, nullable=False)
+    baud_rate = Column(Integer, default=9600, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     user = relationship("User", backref="iot_sensors")

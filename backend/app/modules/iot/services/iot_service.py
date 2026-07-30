@@ -44,12 +44,26 @@ class IotService:
             status="online",
             user_id=user_id,
             last_seen=datetime.datetime.utcnow(),
-            metrics=[m.model_dump() for m in data.metrics] if data.metrics else []
+            metrics=[m.model_dump() for m in data.metrics] if data.metrics else [],
+            send_interval_seconds=data.send_interval_seconds if data.send_interval_seconds is not None else 300,
+            baud_rate=data.baud_rate if data.baud_rate is not None else 9600
         )
         self.db.add(sensor)
         self.db.commit()
         self.db.refresh(sensor)
         return True, "Sensor vinculado con éxito.", sensor
+
+    def update_sensor_config(self, sensor_id: int, user_id: int, send_interval_seconds: int, baud_rate: int = None) -> tuple[bool, str, IotSensor]:
+        sensor = self.get_by_id(sensor_id)
+        if not sensor or sensor.user_id != user_id:
+            return False, "Sensor no encontrado o sin permisos.", None
+        sensor.send_interval_seconds = send_interval_seconds
+        if baud_rate is not None:
+            sensor.baud_rate = baud_rate
+        self.db.add(sensor)
+        self.db.commit()
+        self.db.refresh(sensor)
+        return True, "Configuración actualizada con éxito.", sensor
 
     def delete_sensor(self, sensor_id: int, user_id: int) -> bool:
         sensor = self.get_by_id(sensor_id)

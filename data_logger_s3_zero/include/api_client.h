@@ -4,9 +4,9 @@
 
 namespace ApiClient {
 
-// Consulta el baud rate configurado para este dispositivo en el backend.
-// Devuelve true y llena `baudOut` si el servidor especificó uno.
-bool fetchBaudRate(uint32_t &baudOut);
+// Consulta la configuración configurada para este sensor en el backend.
+// Devuelve true y llena `baudOut` e `intervalOut` si el servidor especificó valores.
+bool fetchConfig(uint32_t &baudOut, uint32_t &intervalOut);
 
 // Envía las mediciones (clave -> valor) junto con el serial del dispositivo.
 bool enviarTelemetria(const std::map<String, float> &medicionesNumericas,

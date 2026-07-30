@@ -26,6 +26,8 @@ interface SensorDevice {
   status: 'online' | 'offline';
   lastSeen: string;
   metrics: SensorMetric[];
+  send_interval_seconds?: number;
+  baud_rate?: number;
 }
 
 type AlertCondition = 'gt' | 'lt' | 'gte' | 'lte';
@@ -133,6 +135,8 @@ function mapApiSensor(s: any): SensorDevice {
     metrics: (s.metrics || []).map((m: any) => ({
       name: m.name, value: m.value, unit: m.unit, status: m.status, trend: m.trend
     })),
+    send_interval_seconds: s.send_interval_seconds || 300,
+    baud_rate: s.baud_rate || 9600,
     // guardamos el id numérico interno para llamadas a reglas de alerta
     _dbId: s.id
   } as SensorDevice & { _dbId: number };
@@ -208,6 +212,49 @@ export default function IotTelemetry() {
   const [ruleCondition,  setRuleCondition]  = useState<AlertCondition>('gt');
   const [ruleThreshold,  setRuleThreshold]  = useState('');
   const [ruleSeverity,   setRuleSeverity]   = useState<AlertSeverity>('warning');
+
+  const [editingInterval, setEditingInterval] = useState<number>(300);
+  const [editingBaud, setEditingBaud] = useState<number>(9600);
+  const [isUpdatingConfig, setIsUpdatingConfig] = useState(false);
+
+  useEffect(() => {
+    if (selectedSensor) {
+      setEditingInterval(selectedSensor.send_interval_seconds || 300);
+      setEditingBaud(selectedSensor.baud_rate || 9600);
+    }
+  }, [selectedSensor]);
+
+  const handleUpdateConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedSensor) return;
+    setIsUpdatingConfig(true);
+    const dbId = (selectedSensor as any)._dbId;
+    try {
+      const res = await fetch(`${API_URL}/iot/sensors/${dbId}/config`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({
+          send_interval_seconds: Number(editingInterval),
+          baud_rate: Number(editingBaud)
+        })
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        const mapped = mapApiSensor(updated);
+        setSensors(prev => prev.map(s => s.id === mapped.id ? mapped : s));
+        setSensorsById(prev => ({ ...prev, [updated.id]: mapped }));
+        setSelectedSensor(mapped);
+        alert("Configuración actualizada con éxito.");
+      } else {
+        alert("Error al actualizar la configuración.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error de conexión.");
+    } finally {
+      setIsUpdatingConfig(false);
+    }
+  };
 
   const wsRef = useRef<WebSocket | null>(null);
 
@@ -527,6 +574,47 @@ export default function IotTelemetry() {
                   <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#00F0FF]" /> Actualizado: {selectedSensor.lastSeen}
                 </span>
               </div>
+
+              {/* Configuración del Sensor */}
+              <form onSubmit={handleUpdateConfig} className="bg-[#0B0F19] border border-white/5 rounded-2xl p-5 flex flex-col md:flex-row justify-between items-end gap-4">
+                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Frecuencia de Envío (segundos)</label>
+                    <input
+                      type="number"
+                      value={editingInterval}
+                      onChange={e => setEditingInterval(Number(e.target.value))}
+                      className="w-full bg-[#161C2D] border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-[#00F0FF] transition-all"
+                      min={5}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Baud Rate (Modbus RTU)</label>
+                    <select
+                      value={editingBaud}
+                      onChange={e => setEditingBaud(Number(e.target.value))}
+                      className="w-full bg-[#161C2D] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#00F0FF] transition-all"
+                    >
+                      <option value={1200}>1200 bps</option>
+                      <option value={2400}>2400 bps</option>
+                      <option value={4800}>4800 bps</option>
+                      <option value={9600}>9600 bps</option>
+                      <option value={19200}>19200 bps</option>
+                      <option value={38400}>38400 bps</option>
+                      <option value={57600}>57600 bps</option>
+                      <option value={115200}>115200 bps</option>
+                    </select>
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  disabled={isUpdatingConfig}
+                  className="bg-gradient-to-r from-blue-600 to-[#00F0FF] hover:opacity-90 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 whitespace-nowrap w-full md:w-auto"
+                >
+                  {isUpdatingConfig ? 'Guardando...' : 'Guardar Configuración'}
+                </button>
+              </form>
 
               {/* Metric cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

@@ -12,6 +12,8 @@
 
 static const int MAX_BOOT_ATTEMPTS = 3; // Reinicios consecutivos sin llegar al bucle principal antes de entrar en modo seguro
 static bool s_modoSeguro = false;
+static uint32_t s_envioIntervaloMs = 300000UL; // 5 minutos por defecto (300000 ms)
+static uint32_t s_baudRate = MODBUS_DEFAULT_BAUD;
 
 // Equivalente a boot.py: detecta arranques fallidos en bucle o el botón
 // mantenido presionado durante el arranque, y entra en modo seguro (sin
@@ -101,15 +103,21 @@ void setup() {
     ApiClient::enviarHeartbeat();
     esp_task_wdt_reset();
 
-    // 2. Pedir configuracion de baud rate a la API
-    uint32_t baudRate = MODBUS_DEFAULT_BAUD;
+    // 2. Pedir configuracion de baud rate e intervalo de envio a la API
     uint32_t serverBaud = 0;
-    if (ApiClient::fetchBaudRate(serverBaud)) {
-        baudRate = serverBaud;
-        Serial.printf("Baud rate obtenido del servidor: %u\n", baudRate);
-        ModbusClient::setBaudRate(baudRate);
+    uint32_t serverIntervalSec = 0;
+    if (ApiClient::fetchConfig(serverBaud, serverIntervalSec)) {
+        if (serverBaud > 0) {
+            s_baudRate = serverBaud;
+            Serial.printf("Baud rate obtenido del servidor: %u\n", s_baudRate);
+            ModbusClient::setBaudRate(s_baudRate);
+        }
+        if (serverIntervalSec > 0) {
+            s_envioIntervaloMs = serverIntervalSec * 1000UL;
+            Serial.printf("Intervalo de envio obtenido del servidor: %u s\n", serverIntervalSec);
+        }
     } else {
-        Serial.printf("Usando baud rate por defecto: %u\n", baudRate);
+        Serial.printf("Usando baud rate por defecto: %u e intervalo: %u ms\n", s_baudRate, s_envioIntervaloMs);
     }
 
     // Llegar hasta aquí confirma que el arranque fue exitoso -> reiniciar el
@@ -155,8 +163,8 @@ void loop() {
         LedStatus::set(LedStatus::Estado::Error);
     }
 
-    // 2. Comprobar si han transcurrido 10 segundos para enviar a la API
-    if (millis() - s_ultimoEnvioMs >= 10000UL) {
+    // 2. Comprobar si han transcurrido los milisegundos indicados para enviar a la API
+    if (millis() - s_ultimoEnvioMs >= s_envioIntervaloMs) {
         s_ultimoEnvioMs = millis();
 
         std::map<String, float> mediciones;
@@ -172,11 +180,11 @@ void loop() {
             mediciones["sensor_humedad"] = promTemp2;
             modbusStatus = "OK";
 
-            Serial.printf(">>> [ENVIO API 10s] Enviando promedio de %d lecturas: Temp1=%.3f, Temp2=%.3f\n", 
+            Serial.printf(">>> [ENVIO API] Enviando promedio de %d lecturas: Temp1=%.3f, Temp2=%.3f\n", 
                           s_cantLecturasValidas, promTemp1, promTemp2);
         } else {
             modbusStatus = "ERROR";
-            Serial.printf(">>> [ENVIO API 10s] Enviando estado de ERROR: %s\n", s_ultimoErrorModbus.c_str());
+            Serial.printf(">>> [ENVIO API] Enviando estado de ERROR: %s\n", s_ultimoErrorModbus.c_str());
         }
 
         // Asegurar conexion WiFi antes de enviar
@@ -189,12 +197,26 @@ void loop() {
 
         if (WifiManager::estaConectado()) {
             ApiClient::enviarTelemetria(mediciones, modbusStatus, (s_cantLecturasValidas > 0) ? "" : s_ultimoErrorModbus);
-            ApiClient::enviarHeartbeat();
+            
+            // Actualizar configuración dinámicamente desde el backend
+            uint32_t serverBaud = 0;
+            uint32_t serverIntervalSec = 0;
+            if (ApiClient::fetchConfig(serverBaud, serverIntervalSec)) {
+                if (serverBaud > 0 && serverBaud != s_baudRate) {
+                    s_baudRate = serverBaud;
+                    Serial.printf("Actualizando Baud Rate: %u\n", s_baudRate);
+                    ModbusClient::setBaudRate(s_baudRate);
+                }
+                if (serverIntervalSec > 0) {
+                    s_envioIntervaloMs = serverIntervalSec * 1000UL;
+                    Serial.printf("Actualizando Intervalo Envio: %u ms\n", s_envioIntervaloMs);
+                }
+            }
         } else {
             Serial.println("No se pudo enviar telemetria por falta de WiFi.");
         }
 
-        // Resetear acumuladores para el siguiente ciclo de 10s
+        // Resetear acumuladores para el siguiente ciclo
         s_sumaTemp1 = 0.0f;
         s_sumaTemp2 = 0.0f;
         s_cantLecturasValidas = 0;

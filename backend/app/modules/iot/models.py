@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Float, JSON
 from sqlalchemy.orm import relationship
 from app.db.base_class import Base
-import datetime
+from app.core.timezone import now_local
 
 class IotSensor(Base):
     __tablename__ = "iot_sensor"
@@ -20,7 +20,7 @@ class IotSensor(Base):
     ota_version = Column(String, nullable=True)
     ota_file_path = Column(String, nullable=True)
     temperature_unit = Column(String, default="C")
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=now_local)
 
     user = relationship("User", backref="iot_sensors")
 
@@ -36,7 +36,7 @@ class AlertRule(Base):
     threshold = Column(Float, nullable=False)
     severity = Column(String, default="warning")  # warning | critical
     enabled = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=now_local)
 
     user = relationship("User", backref="alert_rules")
     sensor = relationship("IotSensor", backref="alert_rules")
@@ -55,7 +55,7 @@ class FiredAlert(Base):
     threshold = Column(Float, nullable=False)
     condition = Column(String, nullable=False)
     severity = Column(String, nullable=False)
-    fired_at = Column(DateTime, default=datetime.datetime.utcnow, index=True)
+    fired_at = Column(DateTime, default=now_local, index=True)
 
     rule = relationship("AlertRule", backref="fired_alerts")
     sensor = relationship("IotSensor", backref="fired_alerts")

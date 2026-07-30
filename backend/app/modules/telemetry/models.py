@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, JSON
 from app.db.base_class import Base
-import datetime
+from app.core.timezone import now_local
 
 class TelemetryData(Base):
     __tablename__ = "telemetry_data"
@@ -13,4 +13,4 @@ class TelemetryData(Base):
     sensor_value = Column(Float, nullable=True)
     mediciones = Column(JSON, nullable=True)
     sensores_extra = Column(JSON, nullable=True)
-    timestamp = Column(DateTime, default=datetime.datetime.utcnow, index=True)
+    timestamp = Column(DateTime, default=now_local, index=True)

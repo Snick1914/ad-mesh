@@ -1,5 +1,6 @@
 import datetime
 from sqlalchemy.orm import Session
+from app.core.timezone import now_local
 from app.modules.iot.models import IotSensor, AlertRule, FiredAlert
 from app.modules.iot.schemas import IotSensorCreate, AlertRuleCreate, SensorMetric
 
@@ -43,7 +44,7 @@ class IotService:
             type=data.type,
             status="online",
             user_id=user_id,
-            last_seen=datetime.datetime.utcnow(),
+            last_seen=now_local(),
             metrics=[m.model_dump() for m in data.metrics] if data.metrics else [],
             send_interval_seconds=data.send_interval_seconds if data.send_interval_seconds is not None else 300,
             baud_rate=data.baud_rate if data.baud_rate is not None else 9600
@@ -163,7 +164,7 @@ class IotService:
                 type=type or "environmental",
                 status="online",
                 user_id=db_user.id if db_user else None,
-                last_seen=datetime.datetime.utcnow(),
+                last_seen=now_local(),
                 metrics=[]
             )
             self.db.add(sensor)
@@ -173,7 +174,7 @@ class IotService:
 
         sensor.metrics = [m.model_dump() for m in metrics]
         sensor.status = "online"
-        sensor.last_seen = datetime.datetime.utcnow()
+        sensor.last_seen = now_local()
         self.db.add(sensor)
         self.db.commit()
         self.db.refresh(sensor)
@@ -184,7 +185,7 @@ class IotService:
                 AlertRule.sensor_id == sensor.id,
                 AlertRule.enabled == True
             ).all()
-            now = datetime.datetime.utcnow()
+            now = now_local()
             metric_map = {m.name: m for m in metrics}
 
             for rule in rules:

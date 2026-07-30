@@ -19,6 +19,7 @@ class IotSensor(Base):
     baud_rate = Column(Integer, default=9600, nullable=True)
     ota_version = Column(String, nullable=True)
     ota_file_path = Column(String, nullable=True)
+    temperature_unit = Column(String, default="C")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     user = relationship("User", backref="iot_sensors")

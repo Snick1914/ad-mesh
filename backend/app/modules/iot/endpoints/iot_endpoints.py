@@ -136,7 +136,9 @@ def update_sensor_configuration(
         sensor_id=sensor_id,
         user_id=current_user.id,
         send_interval_seconds=payload.send_interval_seconds,
-        baud_rate=payload.baud_rate
+        baud_rate=payload.baud_rate,
+        type=payload.type,
+        temperature_unit=payload.temperature_unit
     )
     if not success:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=message)

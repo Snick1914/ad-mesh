@@ -53,13 +53,25 @@ class IotService:
         self.db.refresh(sensor)
         return True, "Sensor vinculado con éxito.", sensor
 
-    def update_sensor_config(self, sensor_id: int, user_id: int, send_interval_seconds: int, baud_rate: int = None) -> tuple[bool, str, IotSensor]:
+    def update_sensor_config(
+        self, 
+        sensor_id: int, 
+        user_id: int, 
+        send_interval_seconds: int, 
+        baud_rate: int = None, 
+        type: str = None, 
+        temperature_unit: str = None
+    ) -> tuple[bool, str, IotSensor]:
         sensor = self.get_by_id(sensor_id)
         if not sensor or sensor.user_id != user_id:
             return False, "Sensor no encontrado o sin permisos.", None
         sensor.send_interval_seconds = send_interval_seconds
         if baud_rate is not None:
             sensor.baud_rate = baud_rate
+        if type is not None:
+            sensor.type = type
+        if temperature_unit is not None:
+            sensor.temperature_unit = temperature_unit
         self.db.add(sensor)
         self.db.commit()
         self.db.refresh(sensor)

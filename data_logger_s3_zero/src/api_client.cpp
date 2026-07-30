@@ -82,7 +82,7 @@ bool enviarTelemetria(const std::map<String, float> &medicionesNumericas,
     if (linkingCode.length() > 0) {
         doc["linking_code"] = linkingCode;
     }
-    doc["type"] = "electrical";
+    doc["type"] = "temperature";
     doc["name"] = "Nodo " + getDeviceSerial().substring(getDeviceSerial().length() - 4);
 
     String payload;

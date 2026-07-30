@@ -22,12 +22,13 @@ interface SensorDevice {
   id: string;
   name: string;
   location: string;
-  type: 'electrical' | 'environmental' | 'fluids';
+  type: string;
   status: 'online' | 'offline';
   lastSeen: string;
   metrics: SensorMetric[];
   send_interval_seconds?: number;
   baud_rate?: number;
+  temperature_unit?: string;
 }
 
 type AlertCondition = 'gt' | 'lt' | 'gte' | 'lte';
@@ -132,11 +133,20 @@ function mapApiSensor(s: any): SensorDevice {
     type: s.type,
     status: s.status,
     lastSeen: s.last_seen ? formatTime(s.last_seen) : 'Sin datos',
-    metrics: (s.metrics || []).map((m: any) => ({
-      name: m.name, value: m.value, unit: m.unit, status: m.status, trend: m.trend
-    })),
+    metrics: (s.metrics || []).map((m: any) => {
+      let val = m.value;
+      let unit = m.unit;
+      if (s.temperature_unit === 'F' && (m.name.toLowerCase().includes('temp') || m.unit.includes('C'))) {
+        val = Number((m.value * 1.8 + 32).toFixed(1));
+        unit = '°F';
+      }
+      return {
+        name: m.name, value: val, unit: unit, status: m.status, trend: m.trend
+      };
+    }),
     send_interval_seconds: s.send_interval_seconds || 300,
     baud_rate: s.baud_rate || 9600,
+    temperature_unit: s.temperature_unit || 'C',
     // guardamos el id numérico interno para llamadas a reglas de alerta
     _dbId: s.id
   } as SensorDevice & { _dbId: number };
@@ -219,7 +229,7 @@ export default function IotTelemetry() {
 
   useEffect(() => {
     if (selectedSensor) {
-      setEditingInterval(selectedSensor.send_interval_seconds || 300);
+      setEditingInterval(Math.round((selectedSensor.send_interval_seconds || 300) / 60));
       setEditingBaud(selectedSensor.baud_rate || 9600);
     }
   }, [selectedSensor]);
@@ -234,7 +244,7 @@ export default function IotTelemetry() {
         method: 'PUT',
         headers: authHeaders(),
         body: JSON.stringify({
-          send_interval_seconds: Number(editingInterval),
+          send_interval_seconds: Number(editingInterval) * 60,
           baud_rate: Number(editingBaud)
         })
       });
@@ -253,48 +263,6 @@ export default function IotTelemetry() {
       alert("Error de conexión.");
     } finally {
       setIsUpdatingConfig(false);
-    }
-  };
-
-  const [otaVersion, setOtaVersion] = useState('');
-  const [otaFile, setOtaFile] = useState<File | null>(null);
-  const [isUploadingOta, setIsUploadingOta] = useState(false);
-
-  const handleUploadOta = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedSensor || !otaFile || !otaVersion.trim()) return;
-    setIsUploadingOta(true);
-    const dbId = (selectedSensor as any)._dbId;
-    
-    const formData = new FormData();
-    formData.append('ota_version', otaVersion);
-    formData.append('file', otaFile);
-
-    try {
-      const res = await fetch(`${API_URL}/iot/sensors/${dbId}/ota`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        },
-        body: formData
-      });
-      if (res.ok) {
-        const updated = await res.json();
-        const mapped = mapApiSensor(updated);
-        setSensors(prev => prev.map(s => s.id === mapped.id ? mapped : s));
-        setSensorsById(prev => ({ ...prev, [updated.id]: mapped }));
-        setSelectedSensor(mapped);
-        setOtaVersion('');
-        setOtaFile(null);
-        alert("Firmware OTA cargado con éxito.");
-      } else {
-        alert("Error al cargar firmware OTA.");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Error de conexión.");
-    } finally {
-      setIsUploadingOta(false);
     }
   };
 
@@ -621,13 +589,13 @@ export default function IotTelemetry() {
               <form onSubmit={handleUpdateConfig} className="bg-[#0B0F19] border border-white/5 rounded-2xl p-5 flex flex-col md:flex-row justify-between items-end gap-4">
                 <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Frecuencia de Envío (segundos)</label>
+                    <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Frecuencia de Envío (minutos)</label>
                     <input
                       type="number"
                       value={editingInterval}
                       onChange={e => setEditingInterval(Number(e.target.value))}
                       className="w-full bg-[#161C2D] border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-[#00F0FF] transition-all"
-                      min={5}
+                      min={1}
                       required
                     />
                   </div>
@@ -655,40 +623,6 @@ export default function IotTelemetry() {
                   className="bg-gradient-to-r from-blue-600 to-[#00F0FF] hover:opacity-90 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 whitespace-nowrap w-full md:w-auto"
                 >
                   {isUpdatingConfig ? 'Guardando...' : 'Guardar Configuración'}
-                </button>
-              </form>
-
-              {/* Actualización de Firmware OTA */}
-              <form onSubmit={handleUploadOta} className="bg-[#0B0F19] border border-white/5 rounded-2xl p-5 flex flex-col md:flex-row justify-between items-end gap-4">
-                <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Versión del Firmware OTA</label>
-                    <input
-                      type="text"
-                      placeholder="Ej. 1.0.1"
-                      value={otaVersion}
-                      onChange={e => setOtaVersion(e.target.value)}
-                      className="w-full bg-[#161C2D] border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-[#00F0FF] transition-all"
-                      required
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Archivo de Firmware (.bin)</label>
-                    <input
-                      type="file"
-                      accept=".bin"
-                      onChange={e => setOtaFile(e.target.files?.[0] || null)}
-                      className="w-full bg-[#161C2D] border border-white/10 rounded-xl px-4 py-1.5 text-sm text-gray-400 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white hover:file:opacity-90 transition-all"
-                      required
-                    />
-                  </div>
-                </div>
-                <button
-                  type="submit"
-                  disabled={isUploadingOta}
-                  className="bg-gradient-to-r from-blue-600 to-[#00F0FF] hover:opacity-90 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 whitespace-nowrap w-full md:w-auto"
-                >
-                  {isUploadingOta ? 'Subiendo...' : 'Subir OTA Firmware'}
                 </button>
               </form>
 

@@ -31,6 +31,7 @@ interface IotSensor {
   baud_rate?: number;
   ota_version?: string;
   ota_file_path?: string;
+  temperature_unit?: string;
   user_id?: number;
   metrics?: SensorMetric[];
 }
@@ -46,6 +47,8 @@ export default function AdminDevicesManager() {
   const [selectedSensor, setSelectedSensor] = useState<IotSensor | null>(null);
   const [editingInterval, setEditingInterval] = useState<number>(300);
   const [editingBaud, setEditingBaud] = useState<number>(9600);
+  const [editingType, setEditingType] = useState<string>('temperature');
+  const [editingTempUnit, setEditingTempUnit] = useState<string>('C');
   const [isUpdatingConfig, setIsUpdatingConfig] = useState(false);
 
   const [otaVersion, setOtaVersion] = useState('');
@@ -67,7 +70,7 @@ export default function AdminDevicesManager() {
       }
 
       // 2. Fetch IoT sensors
-      const sensRes = await fetch(`${apiUrl}/iot/admin/all`, {
+      const sensRes = await fetch(`${apiUrl}/iot/admin/sensors/all`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (sensRes.ok) {
@@ -86,8 +89,10 @@ export default function AdminDevicesManager() {
 
   const handleSelectSensor = (sensor: IotSensor) => {
     setSelectedSensor(sensor);
-    setEditingInterval(sensor.send_interval_seconds || 300);
+    setEditingInterval(Math.round((sensor.send_interval_seconds || 300) / 60));
     setEditingBaud(sensor.baud_rate || 9600);
+    setEditingType(sensor.type || 'temperature');
+    setEditingTempUnit(sensor.temperature_unit || 'C');
   };
 
   const handleUpdateConfig = async (e: React.FormEvent) => {
@@ -103,8 +108,10 @@ export default function AdminDevicesManager() {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          send_interval_seconds: Number(editingInterval),
-          baud_rate: Number(editingBaud)
+          send_interval_seconds: Number(editingInterval) * 60,
+          baud_rate: Number(editingBaud),
+          type: editingType,
+          temperature_unit: editingTempUnit
         })
       });
       if (res.ok) {
@@ -327,16 +334,43 @@ export default function AdminDevicesManager() {
 
                 <form onSubmit={handleUpdateConfig} className="space-y-4">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Frecuencia Envío (segundos)</label>
+                    <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Frecuencia Envío (minutos)</label>
                     <input
                       type="number"
                       value={editingInterval}
                       onChange={e => setEditingInterval(Number(e.target.value))}
                       className="w-full bg-[#161C2D] border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-[#00F0FF] transition-all"
-                      min={5}
+                      min={1}
                       required
                     />
                   </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Tipo de Sensor</label>
+                    <select
+                      value={editingType}
+                      onChange={e => setEditingType(e.target.value)}
+                      className="w-full bg-[#161C2D] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#00F0FF] transition-all"
+                    >
+                      <option value="temperature">Temperatura</option>
+                      <option value="electrical">Eléctrico</option>
+                      <option value="water">Agua</option>
+                      <option value="gas">Gas</option>
+                      <option value="environmental">Medio Ambiente</option>
+                    </select>
+                  </div>
+                  {editingType === 'temperature' && (
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Unidad de Temperatura</label>
+                      <select
+                        value={editingTempUnit}
+                        onChange={e => setEditingTempUnit(e.target.value)}
+                        className="w-full bg-[#161C2D] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#00F0FF] transition-all"
+                      >
+                        <option value="C">Celsius (°C)</option>
+                        <option value="F">Fahrenheit (°F)</option>
+                      </select>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Baud Rate (Modbus RTU)</label>
                     <select

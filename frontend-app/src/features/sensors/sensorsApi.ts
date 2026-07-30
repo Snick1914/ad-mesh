@@ -15,6 +15,7 @@ export interface SensorDevice {
   type: string;
   status: 'online' | 'offline';
   lastSeen: string;
+  lastSeenIso: string | null;
   metrics: SensorMetric[];
   send_interval_seconds?: number;
   baud_rate?: number;
@@ -79,6 +80,7 @@ export function mapApiSensor(s: any): SensorDevice {
     type: s.type,
     status: s.status,
     lastSeen: s.last_seen ? formatTime(s.last_seen) : 'Sin datos',
+    lastSeenIso: s.last_seen || null,
     metrics: (s.metrics || []).map((m: any) => {
       let val = m.value;
       let unit = m.unit;

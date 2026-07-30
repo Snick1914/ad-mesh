@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { MonitorPlay, Film, ListMusic, Bell, User, LogOut, Menu, X, Cpu, BellRing } from 'lucide-react';
+import { MonitorPlay, Film, ListMusic, Bell, User, LogOut, Menu, X, Cpu, BellRing, LayoutDashboard } from 'lucide-react';
 import Logo from '../components/Logo';
 import { useAuthToken } from '../hooks/useAuthToken';
 
@@ -26,6 +26,7 @@ export default function DashboardLayout() {
     {
       title: 'Sensores IoT',
       items: [
+        { name: 'Panorama General', path: '/sensors/dashboard', icon: LayoutDashboard },
         { name: 'Monitoreo', path: '/sensors', icon: Cpu },
         { name: 'Alertas', path: '/sensors/alerts', icon: BellRing },
       ],

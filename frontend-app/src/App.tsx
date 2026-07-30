@@ -4,6 +4,7 @@ import DashboardLayout from './layouts/DashboardLayout';
 import DevicesManager from './features/devices/DevicesManager';
 import MediaLibrary from './features/media/MediaLibrary';
 import PlaylistBuilder from './features/playlists/PlaylistBuilder';
+import SensorsDashboard from './features/sensors/SensorsDashboard';
 import SensorsMonitor from './features/sensors/SensorsMonitor';
 import SensorConfig from './features/sensors/SensorConfig';
 import SensorAlerts from './features/sensors/SensorAlerts';
@@ -80,6 +81,7 @@ function App() {
               <Route path="devices" element={<DevicesManager />} />
               <Route path="media" element={<MediaLibrary />} />
               <Route path="playlists" element={<PlaylistBuilder />} />
+              <Route path="sensors/dashboard" element={<SensorsDashboard />} />
               <Route path="sensors" element={<SensorsMonitor />} />
               <Route path="sensors/alerts" element={<SensorAlerts />} />
               <Route path="sensors/:id/config" element={<SensorConfig />} />

@@ -11,6 +11,7 @@ import AdminLayout from './layouts/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminUsersManager from './pages/admin/AdminUsersManager';
 import AdminDevicesManager from './pages/admin/AdminDevicesManager';
+import AdminSensorDetail from './pages/admin/AdminSensorDetail';
 
 // Componente para proteger rutas
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -92,6 +93,7 @@ function App() {
               <Route index element={<AdminDashboard />} />
               <Route path="users" element={<AdminUsersManager />} />
               <Route path="devices" element={<AdminDevicesManager />} />
+              <Route path="sensors/:id" element={<AdminSensorDetail />} />
             </Route>
 
             {/* Redirección por defecto */}

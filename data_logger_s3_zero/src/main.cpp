@@ -1,6 +1,29 @@
 #include <Arduino.h>
 #include <esp_task_wdt.h>
 #include <map>
+#include <ArduinoOTA.h>
+#include <httpUpdate.h>
+
+static void ejecutarHttpOTA(const String &url) {
+    Serial.println(">>> [OTA] Iniciando actualizacion HTTP OTA de: " + url);
+    WiFiClientSecure client;
+    client.setInsecure();
+    httpUpdate.rebootOnUpdate(true);
+    
+    t_httpUpdate_return ret = httpUpdate.update(client, url);
+    switch (ret) {
+        case HTTP_UPDATE_FAILED:
+            Serial.printf(">>> [OTA] Actualizacion fallida. Error (%d): %s\n", 
+                          httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
+            break;
+        case HTTP_UPDATE_NO_UPDATES:
+            Serial.println(">>> [OTA] No hay actualizaciones disponibles.");
+            break;
+        case HTTP_UPDATE_OK:
+            Serial.println(">>> [OTA] Actualizacion exitosa.");
+            break;
+    }
+}
 
 #include "config.h"
 #include "storage.h"
@@ -14,6 +37,45 @@ static const int MAX_BOOT_ATTEMPTS = 3; // Reinicios consecutivos sin llegar al 
 static bool s_modoSeguro = false;
 static uint32_t s_envioIntervaloMs = 300000UL; // 5 minutos por defecto (300000 ms)
 static uint32_t s_baudRate = MODBUS_DEFAULT_BAUD;
+static bool s_otaEnCurso = false;
+
+static void configurarOTA() {
+    ArduinoOTA.setHostname(("AD-Mesh-" + ApiClient::getDeviceSerial()).c_str());
+    
+    ArduinoOTA.onStart([]() {
+        String type;
+        if (ArduinoOTA.getCommand() == U_FLASH) {
+            type = "sketch";
+        } else { // U_SPIFFS
+            type = "filesystem";
+        }
+        Serial.println("\n>>> [OTA] Iniciando actualizacion de " + type);
+        s_otaEnCurso = true;
+        LedStatus::set(LedStatus::Estado::Iniciando);
+    });
+    
+    ArduinoOTA.onEnd([]() {
+        Serial.println("\n>>> [OTA] Actualizacion finalizada con exito. Reiniciando...");
+        s_otaEnCurso = false;
+    });
+    
+    ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+        Serial.printf(">>> [OTA] Progreso: %u%%\r", (progress / (total / 100)));
+    });
+    
+    ArduinoOTA.onError([](ota_error_t error) {
+        Serial.printf(">>> [OTA] Error[%u]: ", error);
+        if (error == OTA_AUTH_ERROR) Serial.println("Fallo de autenticacion");
+        else if (error == OTA_BEGIN_ERROR) Serial.println("Fallo al iniciar");
+        else if (error == OTA_CONNECT_ERROR) Serial.println("Fallo de conexion");
+        else if (error == OTA_RECEIVE_ERROR) Serial.println("Fallo de recepcion");
+        else if (error == OTA_END_ERROR) Serial.println("Fallo de finalizacion");
+        s_otaEnCurso = false;
+    });
+
+    ArduinoOTA.begin();
+    Serial.println(">>> [OTA] Servicio de actualizacion OTA configurado y listo.");
+}
 
 // Equivalente a boot.py: detecta arranques fallidos en bucle o el botón
 // mantenido presionado durante el arranque, y entra en modo seguro (sin
@@ -43,6 +105,9 @@ static void limpiarContadorArranque() {
 }
 
 void setup() {
+    // Apagar bluetooth inmediatamente para ahorrar energia
+    btStop();
+
     Serial.begin(115200);
     uint32_t t0 = millis();
     while (!Serial && millis() - t0 < 3000) {}
@@ -97,35 +162,72 @@ void setup() {
     ButtonHandler::chequear();
 
     // 1. Conectar a la red (o bloquear en el portal de configuracion)
-    WifiManager::conectar();
+    bool wifiOk = WifiManager::conectar();
 
-    // Heartbeat inicial para registrar/vincular el dispositivo de inmediato
-    ApiClient::enviarHeartbeat();
-    esp_task_wdt_reset();
+    if (wifiOk) {
+        // Heartbeat inicial para registrar/vincular el dispositivo de inmediato
+        ApiClient::enviarHeartbeat();
+        esp_task_wdt_reset();
 
-    // 2. Pedir configuracion de baud rate e intervalo de envio a la API
-    uint32_t serverBaud = 0;
-    uint32_t serverIntervalSec = 0;
-    if (ApiClient::fetchConfig(serverBaud, serverIntervalSec)) {
-        if (serverBaud > 0) {
-            s_baudRate = serverBaud;
-            Serial.printf("Baud rate obtenido del servidor: %u\n", s_baudRate);
-            ModbusClient::setBaudRate(s_baudRate);
+        // 2. Pedir configuracion de baud rate e intervalo de envio a la API
+        uint32_t serverBaud = 0;
+        uint32_t serverIntervalSec = 0;
+        String serverOtaVersion = "";
+        String serverOtaUrl = "";
+        if (ApiClient::fetchConfig(serverBaud, serverIntervalSec, serverOtaVersion, serverOtaUrl)) {
+            if (serverBaud > 0) {
+                s_baudRate = serverBaud;
+                Serial.printf("Baud rate obtenido del servidor: %u\n", s_baudRate);
+                ModbusClient::setBaudRate(s_baudRate);
+            }
+            if (serverIntervalSec > 0) {
+                s_envioIntervaloMs = serverIntervalSec * 1000UL;
+                Serial.printf("Intervalo de envio obtenido del servidor: %u s\n", serverIntervalSec);
+            }
+            if (serverOtaVersion.length() > 0 && serverOtaVersion != FIRMWARE_VERSION && serverOtaUrl.length() > 0) {
+                Serial.printf(">>> [BOOT] Nueva actualizacion OTA detectada: %s. Iniciando...\n", serverOtaVersion.c_str());
+                // Asegurar que la URL sea absoluta
+                String absoluteOtaUrl = serverOtaUrl;
+                if (serverOtaUrl.startsWith("/")) {
+                    absoluteOtaUrl = String(API_BASE_URL) + serverOtaUrl;
+                }
+                ejecutarHttpOTA(absoluteOtaUrl);
+            }
+        } else {
+            Serial.printf("Usando baud rate por defecto: %u e intervalo: %u ms\n", s_baudRate, s_envioIntervaloMs);
         }
-        if (serverIntervalSec > 0) {
-            s_envioIntervaloMs = serverIntervalSec * 1000UL;
-            Serial.printf("Intervalo de envio obtenido del servidor: %u s\n", serverIntervalSec);
+
+        // Configurar e iniciar OTA
+        configurarOTA();
+
+        Serial.println(">>> [BOOT] Abriendo ventana de actualizacion OTA por 30 segundos...");
+        uint32_t startOtaWindow = millis();
+        while (millis() - startOtaWindow < OTA_BOOT_WINDOW_MS) {
+            ArduinoOTA.handle();
+            ButtonHandler::chequear();
+            esp_task_wdt_reset();
+            delay(50);
+            if (s_otaEnCurso) {
+                // Si comenzo la actualizacion, bloquear aqui hasta que termine o de error
+                Serial.println(">>> [BOOT] Actualizacion OTA detectada. Procesando...");
+                while (s_otaEnCurso) {
+                    ArduinoOTA.handle();
+                    esp_task_wdt_reset();
+                    delay(50);
+                }
+                break;
+            }
         }
-    } else {
-        Serial.printf("Usando baud rate por defecto: %u e intervalo: %u ms\n", s_baudRate, s_envioIntervaloMs);
     }
+
+    // Apagar radios de WiFi/Bluetooth después de la ventana inicial para ahorrar energía
+    WifiManager::apagarRadios();
 
     // Llegar hasta aquí confirma que el arranque fue exitoso -> reiniciar el
     // contador de intentos fallidos para que el modo seguro no se dispare
     // en el próximo reinicio normal.
     limpiarContadorArranque();
 }
-
 void loop() {
     if (s_modoSeguro) {
         delay(1000);
@@ -180,28 +282,26 @@ void loop() {
             mediciones["sensor_humedad"] = promTemp2;
             modbusStatus = "OK";
 
-            Serial.printf(">>> [ENVIO API] Enviando promedio de %d lecturas: Temp1=%.3f, Temp2=%.3f\n", 
-                          s_cantLecturasValidas, promTemp1, promTemp2);
+            Serial.printf(">>> [ENVIO API] Encendiendo WiFi para enviar promedio de %d lecturas...\n", s_cantLecturasValidas);
         } else {
             modbusStatus = "ERROR";
-            Serial.printf(">>> [ENVIO API] Enviando estado de ERROR: %s\n", s_ultimoErrorModbus.c_str());
+            Serial.printf(">>> [ENVIO API] Encendiendo WiFi para enviar estado de ERROR: %s\n", s_ultimoErrorModbus.c_str());
         }
 
-        // Asegurar conexion WiFi antes de enviar
-        if (!WifiManager::estaConectado()) {
-            Serial.println("WiFi perdido, reconectando...");
-            LedStatus::set(LedStatus::Estado::Reconectando);
-            WifiManager::conectar(false);
+        // Conectar a WiFi
+        LedStatus::set(LedStatus::Estado::Reconectando);
+        bool conectado = WifiManager::conectar(false);
+
+        if (conectado) {
             ApiClient::enviarHeartbeat();
-        }
-
-        if (WifiManager::estaConectado()) {
             ApiClient::enviarTelemetria(mediciones, modbusStatus, (s_cantLecturasValidas > 0) ? "" : s_ultimoErrorModbus);
             
             // Actualizar configuración dinámicamente desde el backend
             uint32_t serverBaud = 0;
             uint32_t serverIntervalSec = 0;
-            if (ApiClient::fetchConfig(serverBaud, serverIntervalSec)) {
+            String serverOtaVersion = "";
+            String serverOtaUrl = "";
+            if (ApiClient::fetchConfig(serverBaud, serverIntervalSec, serverOtaVersion, serverOtaUrl)) {
                 if (serverBaud > 0 && serverBaud != s_baudRate) {
                     s_baudRate = serverBaud;
                     Serial.printf("Actualizando Baud Rate: %u\n", s_baudRate);
@@ -211,10 +311,41 @@ void loop() {
                     s_envioIntervaloMs = serverIntervalSec * 1000UL;
                     Serial.printf("Actualizando Intervalo Envio: %u ms\n", s_envioIntervaloMs);
                 }
+                if (serverOtaVersion.length() > 0 && serverOtaVersion != FIRMWARE_VERSION && serverOtaUrl.length() > 0) {
+                    Serial.printf(">>> [LOOP] Nueva actualizacion OTA detectada: %s. Iniciando...\n", serverOtaVersion.c_str());
+                    // Asegurar que la URL sea absoluta
+                    String absoluteOtaUrl = serverOtaUrl;
+                    if (serverOtaUrl.startsWith("/")) {
+                        absoluteOtaUrl = String(API_BASE_URL) + serverOtaUrl;
+                    }
+                    ejecutarHttpOTA(absoluteOtaUrl);
+                }
+            }
+
+            // Ventana para permitir actualizacion OTA tras el envio de datos
+            Serial.println(">>> [OTA] Abriendo ventana para actualizaciones OTA por 15 segundos...");
+            uint32_t startOta = millis();
+            while (millis() - startOta < OTA_TX_WINDOW_MS) {
+                ArduinoOTA.handle();
+                ButtonHandler::chequear();
+                esp_task_wdt_reset();
+                delay(50);
+                if (s_otaEnCurso) {
+                    Serial.println(">>> [OTA] Actualizacion OTA detectada durante transmision. Procesando...");
+                    while (s_otaEnCurso) {
+                        ArduinoOTA.handle();
+                        esp_task_wdt_reset();
+                        delay(50);
+                    }
+                    break;
+                }
             }
         } else {
-            Serial.println("No se pudo enviar telemetria por falta de WiFi.");
+            Serial.println("No se pudo conectar a WiFi. Se omitira el envio de este ciclo.");
         }
+
+        // Apagar radios de nuevo para ahorrar energía
+        WifiManager::apagarRadios();
 
         // Resetear acumuladores para el siguiente ciclo
         s_sumaTemp1 = 0.0f;

@@ -256,6 +256,48 @@ export default function IotTelemetry() {
     }
   };
 
+  const [otaVersion, setOtaVersion] = useState('');
+  const [otaFile, setOtaFile] = useState<File | null>(null);
+  const [isUploadingOta, setIsUploadingOta] = useState(false);
+
+  const handleUploadOta = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedSensor || !otaFile || !otaVersion.trim()) return;
+    setIsUploadingOta(true);
+    const dbId = (selectedSensor as any)._dbId;
+    
+    const formData = new FormData();
+    formData.append('ota_version', otaVersion);
+    formData.append('file', otaFile);
+
+    try {
+      const res = await fetch(`${API_URL}/iot/sensors/${dbId}/ota`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        },
+        body: formData
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        const mapped = mapApiSensor(updated);
+        setSensors(prev => prev.map(s => s.id === mapped.id ? mapped : s));
+        setSensorsById(prev => ({ ...prev, [updated.id]: mapped }));
+        setSelectedSensor(mapped);
+        setOtaVersion('');
+        setOtaFile(null);
+        alert("Firmware OTA cargado con éxito.");
+      } else {
+        alert("Error al cargar firmware OTA.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error de conexión.");
+    } finally {
+      setIsUploadingOta(false);
+    }
+  };
+
   const wsRef = useRef<WebSocket | null>(null);
 
   // ── Carga inicial desde backend ────────────────────
@@ -613,6 +655,40 @@ export default function IotTelemetry() {
                   className="bg-gradient-to-r from-blue-600 to-[#00F0FF] hover:opacity-90 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 whitespace-nowrap w-full md:w-auto"
                 >
                   {isUpdatingConfig ? 'Guardando...' : 'Guardar Configuración'}
+                </button>
+              </form>
+
+              {/* Actualización de Firmware OTA */}
+              <form onSubmit={handleUploadOta} className="bg-[#0B0F19] border border-white/5 rounded-2xl p-5 flex flex-col md:flex-row justify-between items-end gap-4">
+                <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Versión del Firmware OTA</label>
+                    <input
+                      type="text"
+                      placeholder="Ej. 1.0.1"
+                      value={otaVersion}
+                      onChange={e => setOtaVersion(e.target.value)}
+                      className="w-full bg-[#161C2D] border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-[#00F0FF] transition-all"
+                      required
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Archivo de Firmware (.bin)</label>
+                    <input
+                      type="file"
+                      accept=".bin"
+                      onChange={e => setOtaFile(e.target.files?.[0] || null)}
+                      className="w-full bg-[#161C2D] border border-white/10 rounded-xl px-4 py-1.5 text-sm text-gray-400 file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white hover:file:opacity-90 transition-all"
+                      required
+                    />
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  disabled={isUploadingOta}
+                  className="bg-gradient-to-r from-blue-600 to-[#00F0FF] hover:opacity-90 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl transition-all shadow-lg shadow-blue-500/20 whitespace-nowrap w-full md:w-auto"
+                >
+                  {isUploadingOta ? 'Subiendo...' : 'Subir OTA Firmware'}
                 </button>
               </form>
 

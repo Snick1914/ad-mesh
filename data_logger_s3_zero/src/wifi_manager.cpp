@@ -64,4 +64,11 @@ bool conectar(bool lanzarPortalSiFalla) {
     return false;
 }
 
+void apagarRadios() {
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+    btStop();
+    Serial.println("[WIFI/BT] Radios de WiFi y Bluetooth apagadas para ahorrar energia.");
+}
+
 } // namespace WifiManager

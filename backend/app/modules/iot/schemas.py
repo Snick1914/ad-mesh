@@ -39,6 +39,8 @@ class IotSensorOut(BaseModel):
     metrics: Optional[List[SensorMetric]] = None
     send_interval_seconds: int
     baud_rate: Optional[int]
+    ota_version: Optional[str] = None
+    ota_file_path: Optional[str] = None
 
     class Config:
         from_attributes = True

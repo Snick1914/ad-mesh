@@ -10,6 +10,8 @@ bool conectar(bool lanzarPortalSiFalla = true);
 
 bool estaConectado();
 
+void apagarRadios();
+
 String obtenerCodigoVinculacion();
 
 } // namespace WifiManager

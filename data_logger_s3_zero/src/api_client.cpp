@@ -9,7 +9,7 @@
 
 namespace ApiClient {
 
-bool fetchConfig(uint32_t &baudOut, uint32_t &intervalOut) {
+bool fetchConfig(uint32_t &baudOut, uint32_t &intervalOut, String &otaVersionOut, String &otaUrlOut) {
     if (!WifiManager::estaConectado()) return false;
 
     WiFiClientSecure client;
@@ -31,6 +31,12 @@ bool fetchConfig(uint32_t &baudOut, uint32_t &intervalOut) {
             }
             if (doc["send_interval_seconds"].is<long>()) {
                 intervalOut = doc["send_interval_seconds"].as<uint32_t>();
+            }
+            if (doc["ota_version"].is<const char*>()) {
+                otaVersionOut = doc["ota_version"].as<String>();
+            }
+            if (doc["ota_url"].is<const char*>()) {
+                otaUrlOut = doc["ota_url"].as<String>();
             }
             ok = true;
         }

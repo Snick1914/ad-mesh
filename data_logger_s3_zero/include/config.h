@@ -1,5 +1,5 @@
 #pragma once
-
+#define FIRMWARE_VERSION    "1.0.0"
 // ===================== Red WiFi por defecto / AP de fábrica =====================
 #define WIFI_SSID_DEFAULT   "WireShapes"
 #define WIFI_PASSWORD_DEFAULT "WireSh@pes_2025#?"
@@ -42,3 +42,5 @@
 #define WIFI_CONNECT_TIMEOUT_S   25
 #define TELEMETRY_LOOP_DELAY_MS  10000UL
 #define HTTP_TIMEOUT_MS          10000
+#define OTA_BOOT_WINDOW_MS       30000UL // Ventana de OTA tras arranque
+#define OTA_TX_WINDOW_MS         15000UL // Ventana de OTA tras cada transmision

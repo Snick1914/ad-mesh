@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status, WebSocket, WebSocketDisconnect
+import os
+import shutil
+from fastapi import APIRouter, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, UploadFile, File, Form
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -115,7 +118,9 @@ def get_sensor_config(
     return {
         "sensor_code": sensor.sensor_code,
         "baud_rate": sensor.baud_rate or 9600,
-        "send_interval_seconds": sensor.send_interval_seconds or 300
+        "send_interval_seconds": sensor.send_interval_seconds or 300,
+        "ota_version": sensor.ota_version or "",
+        "ota_url": f"/api/v1/iot/sensors/ota/download/{sensor.sensor_code}"
     }
 
 
@@ -230,3 +235,52 @@ def list_fired_alerts(
     current_user: User = Depends(deps.get_current_user)
 ):
     return IotService(db).get_user_alerts(current_user.id, limit)
+
+
+@router.post("/sensors/{sensor_id}/ota", response_model=IotSensorOut)
+def upload_sensor_ota(
+    sensor_id: int,
+    ota_version: str = Form(...),
+    file: UploadFile = File(...),
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    service = IotService(db)
+    sensor = service.get_by_id(sensor_id)
+    if not sensor or sensor.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sensor no encontrado o sin permisos.")
+
+    # Crear directorio para almacenar OTAs si no existe
+    upload_dir = "/app/static/media/ota"
+    os.makedirs(upload_dir, exist_ok=True)
+
+    # Nombre de archivo seguro
+    filename = f"{sensor.sensor_code}_{ota_version}_{file.filename}"
+    file_path = os.path.join(upload_dir, filename)
+
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # Actualizar en la base de datos
+    sensor.ota_version = ota_version
+    sensor.ota_file_path = file_path
+    db.add(sensor)
+    db.commit()
+    db.refresh(sensor)
+    return sensor
+
+
+@router.get("/sensors/ota/download/{sensor_code}")
+def download_sensor_ota(
+    sensor_code: str,
+    db: Session = Depends(deps.get_db)
+):
+    service = IotService(db)
+    sensor = service.get_by_code(sensor_code)
+    if not sensor or not sensor.ota_file_path:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Archivo OTA no encontrado.")
+    
+    if not os.path.exists(sensor.ota_file_path):
+         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Archivo físico no encontrado.")
+         
+    return FileResponse(sensor.ota_file_path, media_type="application/octet-stream", filename=os.path.basename(sensor.ota_file_path))

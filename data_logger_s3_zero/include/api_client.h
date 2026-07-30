@@ -15,4 +15,7 @@ bool enviarTelemetria(const std::map<String, float> &medicionesNumericas,
 // Envía heartbeat + vincula el dispositivo con su código de vinculación (si existe).
 bool enviarHeartbeat();
 
+// Retorna el serial único basado en la dirección MAC del dispositivo.
+String getDeviceSerial();
+
 } // namespace ApiClient

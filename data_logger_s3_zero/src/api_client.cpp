@@ -1,6 +1,7 @@
 #include "api_client.h"
 #include <HTTPClient.h>
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
 #include <esp_task_wdt.h>
 #include "config.h"
@@ -11,10 +12,12 @@ namespace ApiClient {
 bool fetchBaudRate(uint32_t &baudOut) {
     if (!WifiManager::estaConectado()) return false;
 
+    WiFiClientSecure client;
+    client.setInsecure();
     HTTPClient http;
-    String url = String(API_BASE_URL) + "/devices/config/" + DEVICE_SERIAL;
+    String url = String(API_BASE_URL) + "/devices/config/" + getDeviceSerial();
     http.setTimeout(HTTP_TIMEOUT_MS);
-    http.begin(url);
+    http.begin(client, url);
 
     int code = http.GET();
     bool ok = false;
@@ -42,7 +45,7 @@ bool enviarTelemetria(const std::map<String, float> &medicionesNumericas,
     if (!WifiManager::estaConectado()) return false;
 
     JsonDocument doc;
-    doc["device_serial"] = DEVICE_SERIAL;
+    doc["device_serial"] = getDeviceSerial();
     JsonObject mediciones = doc["mediciones"].to<JsonObject>();
     for (const auto &kv : medicionesNumericas) {
         mediciones[kv.first] = kv.second;
@@ -55,10 +58,12 @@ bool enviarTelemetria(const std::map<String, float> &medicionesNumericas,
     String payload;
     serializeJson(doc, payload);
 
+    WiFiClientSecure client;
+    client.setInsecure();
     HTTPClient http;
     String url = String(API_BASE_URL) + "/telemetry/";
     http.setTimeout(HTTP_TIMEOUT_MS);
-    http.begin(url);
+    http.begin(client, url);
     http.addHeader("Content-Type", "application/json");
 
     int code = http.POST(payload);
@@ -89,10 +94,12 @@ bool enviarHeartbeat() {
     String payload;
     serializeJson(doc, payload);
 
+    WiFiClientSecure client;
+    client.setInsecure();
     HTTPClient http;
-    String url = String(API_BASE_URL) + "/devices/" + DEVICE_SERIAL + "/heartbeat";
+    String url = String(API_BASE_URL) + "/devices/" + getDeviceSerial() + "/heartbeat";
     http.setTimeout(HTTP_TIMEOUT_MS);
-    http.begin(url);
+    http.begin(client, url);
     http.addHeader("Content-Type", "application/json");
 
     int code = http.POST(payload);
@@ -103,6 +110,12 @@ bool enviarHeartbeat() {
     http.end();
     esp_task_wdt_reset();
     return code > 0;
+}
+
+String getDeviceSerial() {
+    String mac = WiFi.macAddress();
+    mac.replace(":", "");
+    return "ESP32S3_" + mac;
 }
 
 } // namespace ApiClient

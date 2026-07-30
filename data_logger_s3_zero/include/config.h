@@ -4,24 +4,23 @@
 #define WIFI_SSID_DEFAULT   "WireShapes"
 #define WIFI_PASSWORD_DEFAULT "WireSh@pes_2025#?"
 
-#define API_BASE_URL   "http://api.admesh.com/api/v1"
-#define DEVICE_SERIAL  "ESP32S3_Mesh_01"
+#define API_BASE_URL   "https://api.ad-mesh.com/api/v1"
 
 // ===================== Pines Modbus / TTL =====================
 // UART1 dedicado al sensor TTL full-duplex (Serial0/USB queda libre para logs/depuración).
 // Sin pin RE/DE: la línea es TTL directa, no RS485 half-duplex.
 #define MODBUS_UART_NUM   1
-#define MODBUS_RX_PIN     2
-#define MODBUS_TX_PIN     1
+#define MODBUS_RX_PIN     1
+#define MODBUS_TX_PIN     2
 
 // ===================== Configuración Modbus RTU =====================
-#define MODBUS_SLAVE_ID       1
+#define MODBUS_SLAVE_ID       8
 #define MODBUS_DEFAULT_BAUD   9600
-#define MODBUS_FUNCTION_CODE  4
-#define MODBUS_EU_FACTOR      100.0f
+#define MODBUS_FUNCTION_CODE  3
+#define MODBUS_EU_FACTOR      1.0f
 #define MODBUS_START_REG      0
 #define MODBUS_REG_COUNT      2
-#define MODBUS_RESPONSE_TIMEOUT_MS 300
+#define MODBUS_RESPONSE_TIMEOUT_MS 2500
 
 // ===================== Botón físico de reset / modo config =====================
 #define BUTTON_PIN            7

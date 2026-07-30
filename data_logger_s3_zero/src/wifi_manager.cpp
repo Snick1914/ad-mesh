@@ -21,7 +21,7 @@ String obtenerCodigoVinculacion() {
     return "";
 }
 
-bool conectar() {
+bool conectar(bool lanzarPortalSiFalla) {
     String ssidGuardado, passGuardado, linkingCode;
     bool hayCredenciales = Storage::cargarCredenciales(ssidGuardado, passGuardado, linkingCode);
 
@@ -57,9 +57,11 @@ bool conectar() {
     }
 
     Serial.printf("\nError al conectar a WiFi. Ultimo status: %d\n", WiFi.status());
-    // Bloquea hasta recibir credenciales nuevas y luego reinicia el equipo.
-    CaptivePortal::iniciar();
-    return false; // No debería llegar aquí (CaptivePortal::iniciar reinicia el equipo)
+    if (lanzarPortalSiFalla) {
+        // Bloquea hasta recibir credenciales nuevas y luego reinicia el equipo.
+        CaptivePortal::iniciar();
+    }
+    return false;
 }
 
 } // namespace WifiManager

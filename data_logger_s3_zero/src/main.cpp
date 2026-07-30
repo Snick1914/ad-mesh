@@ -2,7 +2,7 @@
 #include <esp_task_wdt.h>
 #include <map>
 #include <ArduinoOTA.h>
-#include <httpUpdate.h>
+#include <HTTPUpdate.h>
 
 static void ejecutarHttpOTA(const String &url) {
     Serial.println(">>> [OTA] Iniciando actualizacion HTTP OTA de: " + url);

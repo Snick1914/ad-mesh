@@ -120,7 +120,7 @@ def get_sensor_config(
         "baud_rate": sensor.baud_rate or 9600,
         "send_interval_seconds": sensor.send_interval_seconds or 300,
         "ota_version": sensor.ota_version or "",
-        "ota_url": f"/api/v1/iot/sensors/ota/download/{sensor.sensor_code}"
+        "ota_url": f"/iot/sensors/ota/download/{sensor.sensor_code}"
     }
 
 

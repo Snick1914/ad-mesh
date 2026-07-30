@@ -418,11 +418,15 @@ export default function IotTelemetry() {
     }
   };
 
-  const getSensorIcon = (type: 'electrical' | 'environmental' | 'fluids') => {
+  const getSensorIcon = (type: string) => {
     switch (type) {
       case 'electrical':    return <Zap         className="w-5 h-5 text-yellow-400" />;
+      case 'temperature':   return <Thermometer className="w-5 h-5 text-orange-400" />;
       case 'environmental': return <Thermometer className="w-5 h-5 text-blue-400"   />;
+      case 'water':         return <Gauge        className="w-5 h-5 text-cyan-400"   />;
+      case 'gas':           return <Activity     className="w-5 h-5 text-green-400"  />;
       case 'fluids':        return <Gauge        className="w-5 h-5 text-cyan-400"   />;
+      default:              return <Cpu          className="w-5 h-5 text-gray-400"   />;
     }
   };
 

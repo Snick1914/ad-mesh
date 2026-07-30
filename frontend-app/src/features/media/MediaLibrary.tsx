@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { UploadCloud, Image as ImageIcon, Video, Trash2, Clock, HardDrive, Search, Film, Loader2 } from 'lucide-react';
 import type { MediaItem, MediaType } from '../../types';
+import { decodeAuthToken } from '../../hooks/useAuthToken';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
@@ -51,21 +52,9 @@ export default function MediaLibrary() {
 
   useEffect(() => {
     fetchMedia();
-    
-    // Obtener límites del JWT
-    try {
-      const token = localStorage.getItem('token');
-      if (token) {
-        const base64Url = token.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const payload = JSON.parse(window.atob(base64));
-        if (payload && payload.max_storage_gb) {
-          setMaxStorageGb(payload.max_storage_gb);
-        }
-      }
-    } catch (e) {
-      console.warn("Could not decode limits from JWT:", e);
-    }
+
+    const { maxStorageGb: limit } = decodeAuthToken();
+    if (limit) setMaxStorageGb(limit);
   }, []);
 
   const handleDelete = async (id: string) => {

@@ -4,7 +4,9 @@ import DashboardLayout from './layouts/DashboardLayout';
 import DevicesManager from './features/devices/DevicesManager';
 import MediaLibrary from './features/media/MediaLibrary';
 import PlaylistBuilder from './features/playlists/PlaylistBuilder';
-import IotTelemetry from './features/telemetry/IotTelemetry';
+import SensorsMonitor from './features/sensors/SensorsMonitor';
+import SensorConfig from './features/sensors/SensorConfig';
+import SensorAlerts from './features/sensors/SensorAlerts';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import AdminLayout from './layouts/AdminLayout';
@@ -78,7 +80,9 @@ function App() {
               <Route path="devices" element={<DevicesManager />} />
               <Route path="media" element={<MediaLibrary />} />
               <Route path="playlists" element={<PlaylistBuilder />} />
-              <Route path="telemetry" element={<IotTelemetry />} />
+              <Route path="sensors" element={<SensorsMonitor />} />
+              <Route path="sensors/alerts" element={<SensorAlerts />} />
+              <Route path="sensors/:id/config" element={<SensorConfig />} />
             </Route>
 
             {/* Rutas Protegidas Administrador Global */}

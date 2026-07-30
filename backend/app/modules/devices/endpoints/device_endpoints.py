@@ -339,3 +339,17 @@ def delete_device_schedule(
     return {"status": "success", "message": "Programación eliminada con éxito."}
 
 
+@router.get("/admin/all", response_model=List[DeviceOut])
+def list_all_devices(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    """
+    Obtener todas las pantallas en el sistema (Solo Administradores).
+    """
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Permisos insuficientes.")
+    service = DeviceService(db)
+    return service.get_all_devices()
+
+

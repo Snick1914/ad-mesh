@@ -284,3 +284,17 @@ def download_sensor_ota(
          raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Archivo físico no encontrado.")
          
     return FileResponse(sensor.ota_file_path, media_type="application/octet-stream", filename=os.path.basename(sensor.ota_file_path))
+
+
+@router.get("/admin/sensors/all", response_model=List[IotSensorOut])
+def list_all_sensors(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    """
+    Obtener todos los sensores IoT en el sistema (Solo Administradores).
+    """
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Permisos insuficientes.")
+    sensors = db.query(IotSensor).order_by(IotSensor.id).all()
+    return sensors

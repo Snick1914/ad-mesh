@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, LogOut, Menu, X, Bell, User, ShieldAlert } from 'lucide-react';
+import { LayoutDashboard, Users, LogOut, Menu, X, Bell, User, ShieldAlert, Cpu } from 'lucide-react';
 
 export default function AdminLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -41,6 +41,7 @@ export default function AdminLayout() {
   const navItems = [
     { name: 'Consola Global', path: '/admin', icon: LayoutDashboard },
     { name: 'Gestión de Clientes', path: '/admin/users', icon: Users },
+    { name: 'Gestión de Dispositivos', path: '/admin/devices', icon: Cpu },
   ];
 
   if (!isAdmin) {

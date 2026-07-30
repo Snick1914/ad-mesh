@@ -21,6 +21,9 @@ class DeviceService:
     def get_user_devices(self, user_id: int) -> list[Device]:
         return self.db.query(Device).filter(Device.user_id == user_id, Device.is_paired == True).all()
 
+    def get_all_devices(self) -> list[Device]:
+        return self.db.query(Device).all()
+
     def generate_pairing_code(self, serial_number: str) -> Device:
         # Buscar si el dispositivo ya existe
         device = self.get_by_serial(serial_number)

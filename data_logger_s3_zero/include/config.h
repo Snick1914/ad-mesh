@@ -1,5 +1,5 @@
 #pragma once
-#define FIRMWARE_VERSION    "1.0.0"
+#define FIRMWARE_VERSION    "1.0.1"
 // ===================== Red WiFi por defecto / AP de fábrica =====================
 #define WIFI_SSID_DEFAULT   "WireShapes"
 #define WIFI_PASSWORD_DEFAULT "WireSh@pes_2025#?"

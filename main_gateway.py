@@ -5,9 +5,10 @@ import struct
 import ujson
 import urequests
 import os
+import gc
 
 # Versión del firmware actual — se actualiza con cada OTA exitosa
-CURRENT_VERSION = "1.0.0"
+CURRENT_VERSION = "1.0.2"
 
 # --- CONFIGURACIÓN BACKEND AD-MESH ---
 class Config:
@@ -195,16 +196,64 @@ class IndustrialGateway:
         if not self.wlan.isconnected():
             print("WiFi no conectado. Omitiendo envío.")
             return False
+
         try:
-            r = urequests.post(self.ingest_url, json=payload, headers=Config.HEADERS)
-            print("Backend Response Code:", r.status_code)
-            if r.status_code >= 400:
-                print("Backend Error Body:", r.text)
-            r.close()
-            return r.status_code in (200, 201)
-        except Exception as e:
-            print("Error envío HTTP:", e)
-            return False
+            import socket
+        except ImportError:
+            import usocket as socket
+
+        try:
+            import ssl
+        except ImportError:
+            import ussl as ssl
+
+        json_str = ujson.dumps(payload)
+        host = Config.DOMAIN
+        path = "/api/v1/iot/sensors/" + Config.DEVICE_SERIAL + "/ingest"
+
+        req = (
+            "POST {} HTTP/1.1\r\n"
+            "Host: {}\r\n"
+            "Content-Type: application/json\r\n"
+            "Content-Length: {}\r\n"
+            "Connection: close\r\n\r\n"
+            "{}"
+        ).format(path, host, len(json_str), json_str)
+
+        for intento in range(2):
+            self.feed_wdt()
+            gc.collect()
+            s = None
+            try:
+                addr_info = socket.getaddrinfo(host, 443)[0][-1]
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                s.settimeout(5.0)
+                s.connect(addr_info)
+                s = ssl.wrap_socket(s, server_hostname=host)
+                s.write(req.encode('utf-8'))
+
+                response_line = s.readline()
+                print("Backend HTTPS Response:", response_line.decode('utf-8').strip())
+
+                # Drenar socket
+                while True:
+                    data = s.read(128)
+                    if not data:
+                        break
+
+                s.close()
+                gc.collect()
+                return b"200" in response_line or b"201" in response_line
+
+            except Exception as e:
+                print("Error envío HTTPS (Intento {}): {}".format(intento + 1, e))
+                if s:
+                    try: s.close()
+                    except Exception: pass
+                gc.collect()
+                time.sleep_ms(500)
+
+        return False
 
     def process_buffer(self, buffer):
         if not buffer:
@@ -223,7 +272,7 @@ class IndustrialGateway:
         ]
 
         metrics = [
-            {"name": "modbus_status", "value": 1.0 if last.get("v1") is not None else 0.0, "unit": "status"},
+            {"name": "modbus_status", "value": 1.0 if last.get("voltaje") is not None else 0.0, "unit": "status"},
             {"name": "energia_total", "value": round(last.get("energia_total", 0.0), 2), "unit": "kWh"},
             {"name": "e1", "value": round(last.get("e1", 0.0), 2), "unit": "kWh"},
             {"name": "e2", "value": round(last.get("e2", 0.0), 2), "unit": "kWh"},
@@ -345,30 +394,6 @@ class IndustrialGateway:
                     print(">>> Enviando a ad-mesh.com -> Endpoint:", self.ingest_url)
                     if self.send_to_backend(payload):
                         readings_buffer = []
-            elif not readings_buffer:
-                # Si el medidor no respondió en este instante, reportar fallback con la lista completa de métricas
-                fallback_payload = {
-                    "metrics": [
-                        {"name": "modbus_status", "value": 0.0, "unit": "status"},
-                        {"name": "voltaje", "value": 0.0, "unit": "V"},
-                        {"name": "v2", "value": 0.0, "unit": "V"},
-                        {"name": "v3", "value": 0.0, "unit": "V"},
-                        {"name": "corriente", "value": 0.0, "unit": "A"},
-                        {"name": "a2", "value": 0.0, "unit": "A"},
-                        {"name": "a3", "value": 0.0, "unit": "A"},
-                        {"name": "potencia", "value": 0.0, "unit": "W"},
-                        {"name": "p1", "value": 0.0, "unit": "W"},
-                        {"name": "p2", "value": 0.0, "unit": "W"},
-                        {"name": "p3", "value": 0.0, "unit": "W"},
-                        {"name": "frecuencia", "value": 0.0, "unit": "Hz"},
-                        {"name": "pf", "value": 0.0, "unit": ""},
-                        {"name": "energia_total", "value": 0.0, "unit": "kWh"}
-                    ],
-                    "linking_code": Config.LINKING_CODE,
-                    "type": "electrical",
-                    "name": "Medidor Casa Ley"
-                }
-                self.send_to_backend(fallback_payload)
 
             for _ in range(Config.READ_INTERVAL_SEC * 10):
                 self.feed_wdt()

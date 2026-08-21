@@ -47,7 +47,7 @@ class MQTTService:
         except Exception as e:
             logger.error(f"[MQTT] Error handling message: {e}")
 
-    def on_disconnect(self, client, packet, exc):
+    def on_disconnect(self, client, packet=None, exc=None):
         logger.warning("[MQTT] Disconnected from broker.")
 
     async def start(self):

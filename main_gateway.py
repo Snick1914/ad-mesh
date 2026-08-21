@@ -62,15 +62,20 @@ class OTAUpdater:
                 print("OTA: Firmware al día (v{}).".format(CURRENT_VERSION))
                 return
 
-            # Si ota_url es relativa, completar con BASE_URL / DOMAIN
+            # Si ota_url es relativa, completar con HTTP (sin SSL pesado para OTA en MicroPython)
             if ota_url.startswith("/"):
-                full_ota_url = "https://" + Config.DOMAIN + "/api/v1" + ota_url
+                full_ota_url = "http://" + Config.DOMAIN + "/api/v1" + ota_url
             else:
                 full_ota_url = ota_url
 
             print("OTA: Nueva versión detectada: {} -> {}".format(CURRENT_VERSION, ota_version))
             self._download_and_apply(full_ota_url, ota_version, wdt)
 
+        except OSError as e:
+            if e.args and e.args[0] == -202:
+                print("OTA: Memoria RAM/SSL insuficiente (-202). Omitiendo verificación OTA.")
+            else:
+                print("OTA: Error de red/socket:", e)
         except Exception as e:
             print("OTA: Error en proceso de verificación:", e)
 

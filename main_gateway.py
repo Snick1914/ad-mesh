@@ -16,11 +16,8 @@ class Config:
     LINKING_CODE   = "USR-PA3XONWC"
     HEADERS        = {"Content-Type": "application/json"}
     
-    # Serial identificador del dispositivo
-    wlan_temp = network.WLAN(network.STA_IF)
-    wlan_temp.active(True)
-    mac_bytes = wlan_temp.config('mac')
-    DEVICE_SERIAL = "ESP32S3_" + "".join(["{:02X}".format(b) for b in mac_bytes])
+    # Serial identificador del dispositivo fijos
+    DEVICE_SERIAL = "ESP32S3_F4650B47F1A8"
 
     # Hardware MDWR2048 / ESP32
     UART_ID   = 2
@@ -349,13 +346,20 @@ class IndustrialGateway:
                     if self.send_to_backend(payload):
                         readings_buffer = []
             elif not readings_buffer:
-                # Si el medidor no respondió, enviar estado de modbus fallido
+                # Si el medidor no respondió en este instante, reportar fallback con la lista completa de métricas
                 fallback_payload = {
                     "metrics": [
                         {"name": "modbus_status", "value": 0.0, "unit": "status"},
                         {"name": "voltaje", "value": 0.0, "unit": "V"},
+                        {"name": "v2", "value": 0.0, "unit": "V"},
+                        {"name": "v3", "value": 0.0, "unit": "V"},
                         {"name": "corriente", "value": 0.0, "unit": "A"},
+                        {"name": "a2", "value": 0.0, "unit": "A"},
+                        {"name": "a3", "value": 0.0, "unit": "A"},
                         {"name": "potencia", "value": 0.0, "unit": "W"},
+                        {"name": "p1", "value": 0.0, "unit": "W"},
+                        {"name": "p2", "value": 0.0, "unit": "W"},
+                        {"name": "p3", "value": 0.0, "unit": "W"},
                         {"name": "frecuencia", "value": 0.0, "unit": "Hz"},
                         {"name": "pf", "value": 0.0, "unit": ""},
                         {"name": "energia_total", "value": 0.0, "unit": "kWh"}

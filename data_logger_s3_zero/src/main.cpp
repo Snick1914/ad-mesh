@@ -274,12 +274,8 @@ void loop() {
 
         if (s_cantLecturasValidas > 0) {
             float promTemp1 = s_sumaTemp1 / s_cantLecturasValidas;
-            float promTemp2 = s_sumaTemp2 / s_cantLecturasValidas;
 
-            mediciones["temp1"] = promTemp1;
-            mediciones["temp2"] = promTemp2;
             mediciones["sensor_temperatura"] = promTemp1;
-            mediciones["sensor_humedad"] = promTemp2;
             modbusStatus = "OK";
 
             Serial.printf(">>> [ENVIO API] Encendiendo WiFi para enviar promedio de %d lecturas...\n", s_cantLecturasValidas);

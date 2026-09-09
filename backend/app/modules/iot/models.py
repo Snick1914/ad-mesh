@@ -60,3 +60,18 @@ class FiredAlert(Base):
 
     rule = relationship("AlertRule", backref="fired_alerts")
     sensor = relationship("IotSensor", backref="fired_alerts")
+
+
+class IotTelemetryHistory(Base):
+    __tablename__ = "iot_telemetry_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    sensor_id = Column(Integer, ForeignKey("iot_sensor.id", ondelete="CASCADE"), nullable=False, index=True)
+    sensor_code = Column(String, nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), nullable=True, index=True)
+    metrics = Column(JSON, nullable=False)
+    created_at = Column(DateTime, default=now_local, index=True)
+
+    sensor = relationship("IotSensor", backref="telemetry_history")
+    user = relationship("User", backref="telemetry_history")
+

@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Cpu, Activity, Zap, Thermometer, Gauge, AlertTriangle,
-  RefreshCw, Plus, Search, ShieldAlert, Settings2,
+  RefreshCw, Plus, Search, ShieldAlert, Settings2, FileSpreadsheet,
 } from 'lucide-react';
 import Modal from '../../components/Modal';
 import EmptyState from '../../components/EmptyState';
 import { useSensorsData } from './useSensorsData';
 import AlertToastStack from './AlertToastStack';
+import ExportReportModal from './ExportReportModal';
 import { API_URL, authHeaders, mapApiSensor, getMockMetrics, SensorMetric } from './sensorsApi';
 
 const getSensorIcon = (type: string) => {
@@ -26,7 +27,7 @@ export default function SensorsMonitor() {
   const navigate = useNavigate();
   const {
     sensors, setSensors, setSensorsById,
-    alertRules, firedAlerts, toastAlerts, dismissToast,
+    alertRules, firedAlerts, telemetryHistory, toastAlerts, dismissToast,
     isLoading,
   } = useSensorsData();
 
@@ -34,6 +35,7 @@ export default function SensorsMonitor() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'electrical' | 'environmental' | 'fluids'>('all');
   const [isAddSensorOpen, setIsAddSensorOpen] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
 
   const [newSensorId, setNewSensorId] = useState('');
   const [newSensorName, setNewSensorName] = useState('');
@@ -91,11 +93,20 @@ export default function SensorsMonitor() {
               </h1>
               <p className="text-gray-400 text-xs mt-0.5">Monitoreo de telemetría física en tiempo real.</p>
             </div>
-            <button onClick={() => setIsAddSensorOpen(true)}
-              className="p-2.5 bg-[#00F0FF]/10 hover:bg-[#00F0FF]/20 text-[#00F0FF] rounded-xl border border-[#00F0FF]/20 transition-all"
-              title="Agregar Sensor">
-              <Plus className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsExportOpen(true)}
+                className="p-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/20 transition-all"
+                title="Exportar Reporte Excel"
+              >
+                <FileSpreadsheet className="w-5 h-5" />
+              </button>
+              <button onClick={() => setIsAddSensorOpen(true)}
+                className="p-2.5 bg-[#00F0FF]/10 hover:bg-[#00F0FF]/20 text-[#00F0FF] rounded-xl border border-[#00F0FF]/20 transition-all"
+                title="Agregar Sensor">
+                <Plus className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* Search & filters */}
@@ -300,6 +311,15 @@ export default function SensorsMonitor() {
           </div>
         </form>
       </Modal>
+
+      <ExportReportModal
+        open={isExportOpen}
+        onClose={() => setIsExportOpen(false)}
+        sensors={sensors}
+        firedAlerts={firedAlerts}
+        alertRules={alertRules}
+        telemetryHistory={telemetryHistory}
+      />
     </>
   );
 }

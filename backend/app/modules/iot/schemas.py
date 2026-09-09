@@ -101,3 +101,15 @@ class FiredAlertOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class IotTelemetryHistoryOut(BaseModel):
+    id: int
+    sensor_id: int
+    sensor_code: str
+    metrics: List[SensorMetric]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+

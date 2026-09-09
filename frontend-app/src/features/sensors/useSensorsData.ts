@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  API_URL, authHeaders, mapApiSensor, mapApiRule, mapApiFiredAlert,
-  SensorDevice, AlertRule, FiredAlert,
+  API_URL, authHeaders, mapApiSensor, mapApiRule, mapApiFiredAlert, mapApiTelemetryHistory,
+  SensorDevice, AlertRule, FiredAlert, TelemetryRecord,
 } from './sensorsApi';
 
 export function useSensorsData() {
@@ -9,6 +9,7 @@ export function useSensorsData() {
   const [sensorsById, setSensorsById] = useState<Record<number, SensorDevice>>({});
   const [alertRules, setAlertRules] = useState<AlertRule[]>([]);
   const [firedAlerts, setFiredAlerts] = useState<FiredAlert[]>([]);
+  const [telemetryHistory, setTelemetryHistory] = useState<TelemetryRecord[]>([]);
   const [toastAlerts, setToastAlerts] = useState<FiredAlert[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -39,6 +40,15 @@ export function useSensorsData() {
     setFiredAlerts(data.map((a: any) => mapApiFiredAlert(a, byId)));
   }, []);
 
+  const loadHistory = useCallback(async (byId: Record<number, SensorDevice>) => {
+    try {
+      const res = await fetch(`${API_URL}/iot/telemetry/history?limit=1000`, { headers: authHeaders() });
+      if (!res.ok) return;
+      const data = await res.json();
+      setTelemetryHistory(data.map((t: any) => mapApiTelemetryHistory(t, byId)));
+    } catch { /* noop */ }
+  }, []);
+
   const reloadAll = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -46,13 +56,14 @@ export function useSensorsData() {
       if (byId) {
         await loadRules(byId);
         await loadAlerts(byId);
+        await loadHistory(byId);
       }
     } catch (err) {
       console.error('Error cargando datos de sensores:', err);
     } finally {
       setIsLoading(false);
     }
-  }, [loadSensors, loadRules, loadAlerts]);
+  }, [loadSensors, loadRules, loadAlerts, loadHistory]);
 
   useEffect(() => {
     reloadAll();
@@ -98,6 +109,7 @@ export function useSensorsData() {
   return {
     sensors, setSensors, sensorsById, setSensorsById,
     alertRules, setAlertRules, firedAlerts, setFiredAlerts,
+    telemetryHistory, setTelemetryHistory,
     toastAlerts, dismissToast,
     isLoading, reloadAll,
   };

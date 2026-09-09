@@ -1,66 +1,92 @@
 import { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { MonitorPlay, Film, ListMusic, Bell, User, LogOut, Menu, X, Cpu, BellRing, LayoutDashboard } from 'lucide-react';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { MonitorPlay, Film, ListMusic, Bell, User, LogOut, Menu, X, Cpu, BellRing, LayoutDashboard, Tv2, Radio } from 'lucide-react';
 import Logo from '../components/Logo';
 import { useAuthToken } from '../hooks/useAuthToken';
 
 export default function DashboardLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { isSuperuser, userName, userEmail, userLinkingCode } = useAuthToken();
+
+  const isIotActive = location.pathname.startsWith('/sensors');
+  const activeModule: 'ads' | 'iot' = isIotActive ? 'iot' : 'ads';
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     navigate('/login');
   };
 
-  const navSections = [
-    {
-      title: 'Señalización Digital',
-      items: [
-        { name: 'Pantallas', path: '/devices', icon: MonitorPlay },
-        { name: 'Biblioteca', path: '/media', icon: Film },
-        { name: 'Playlists', path: '/playlists', icon: ListMusic },
-      ],
-    },
-    {
-      title: 'Sensores IoT',
-      items: [
-        { name: 'Panorama General', path: '/sensors/dashboard', icon: LayoutDashboard },
-        { name: 'Monitoreo', path: '/sensors', icon: Cpu },
-        { name: 'Alertas', path: '/sensors/alerts', icon: BellRing },
-      ],
-    },
+  const adsNavItems = [
+    { name: 'Pantallas', path: '/devices', icon: MonitorPlay },
+    { name: 'Biblioteca', path: '/media', icon: Film },
+    { name: 'Playlists', path: '/playlists', icon: ListMusic },
   ];
 
+  const iotNavItems = [
+    { name: 'Panorama General', path: '/sensors/dashboard', icon: LayoutDashboard },
+    { name: 'Monitoreo', path: '/sensors', icon: Cpu },
+    { name: 'Alertas', path: '/sensors/alerts', icon: BellRing },
+  ];
+
+  const currentNavItems = activeModule === 'iot' ? iotNavItems : adsNavItems;
+
+  const ModuleSwitcher = ({ onNavigate }: { onNavigate?: () => void }) => (
+    <div className="p-3 bg-[#0B0F19] rounded-xl border border-white/5 mx-4 mt-4 grid grid-cols-2 gap-1.5 shadow-inner">
+      <button
+        onClick={() => {
+          onNavigate?.();
+          navigate('/devices');
+        }}
+        className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+          activeModule === 'ads'
+            ? 'bg-[#00F0FF] text-[#0a0d14] shadow-[0_0_12px_rgba(0,240,255,0.4)]'
+            : 'text-gray-400 hover:text-white hover:bg-white/5'
+        }`}
+      >
+        <Tv2 className="w-3.5 h-3.5" />
+        ADS
+      </button>
+      <button
+        onClick={() => {
+          onNavigate?.();
+          navigate('/sensors');
+        }}
+        className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all ${
+          activeModule === 'iot'
+            ? 'bg-[#00F0FF] text-[#0a0d14] shadow-[0_0_12px_rgba(0,240,255,0.4)]'
+            : 'text-gray-400 hover:text-white hover:bg-white/5'
+        }`}
+      >
+        <Radio className="w-3.5 h-3.5" />
+        IoT
+      </button>
+    </div>
+  );
+
   const NavSections = ({ onNavigate }: { onNavigate?: () => void }) => (
-    <nav className="flex-1 px-4 py-6 space-y-6">
-      {navSections.map((section) => (
-        <div key={section.title} className="space-y-2">
-          <h3 className="px-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-            {section.title}
-          </h3>
-          <div className="space-y-1">
-            {section.items.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                end
-                onClick={onNavigate}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium ${
-                    isActive
-                      ? 'bg-[#00F0FF]/10 text-[#00F0FF] border border-[#00F0FF]/20'
-                      : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
-                  }`
-                }
-              >
-                <item.icon className="w-5 h-5" />
-                {item.name}
-              </NavLink>
-            ))}
-          </div>
-        </div>
+    <nav className="flex-1 px-4 py-5 space-y-1">
+      <h3 className="px-4 pb-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+        {activeModule === 'iot' ? 'Módulo Sensores IoT' : 'Módulo Señalización ADS'}
+      </h3>
+      {currentNavItems.map((item) => (
+        <NavLink
+          key={item.path}
+          to={item.path}
+          end
+          onClick={onNavigate}
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium ${
+              isActive
+                ? 'bg-[#00F0FF]/10 text-[#00F0FF] border border-[#00F0FF]/20'
+                : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
+            }`
+          }
+        >
+          <item.icon className="w-5 h-5" />
+          {item.name}
+        </NavLink>
       ))}
     </nav>
   );
@@ -92,6 +118,7 @@ export default function DashboardLayout() {
         <div className="h-20 flex items-center px-6 border-b border-white/5">
           <Logo />
         </div>
+        <ModuleSwitcher />
         <NavSections />
         <SidebarFooter />
       </aside>
@@ -107,6 +134,7 @@ export default function DashboardLayout() {
                 <X className="w-6 h-6" />
               </button>
             </div>
+            <ModuleSwitcher onNavigate={() => setIsMobileMenuOpen(false)} />
             <NavSections onNavigate={() => setIsMobileMenuOpen(false)} />
             <SidebarFooter onNavigate={() => setIsMobileMenuOpen(false)} />
           </aside>

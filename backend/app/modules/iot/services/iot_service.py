@@ -1,7 +1,7 @@
 import datetime
 from sqlalchemy.orm import Session
 from app.core.timezone import now_local
-from app.modules.iot.models import IotSensor, AlertRule, FiredAlert
+from app.modules.iot.models import IotSensor, AlertRule, FiredAlert, IotTelemetryHistory
 from app.modules.iot.schemas import IotSensorCreate, AlertRuleCreate, SensorMetric
 
 ALERT_COOLDOWN_SECONDS = 15
@@ -131,11 +131,31 @@ class IotService:
         return True
 
     # ── Fired alerts ───────────────────────────────────
-    def get_user_alerts(self, user_id: int, limit: int = 50) -> list[FiredAlert]:
-        return self.db.query(FiredAlert)\
-            .filter(FiredAlert.user_id == user_id)\
-            .order_by(FiredAlert.fired_at.desc())\
-            .limit(limit).all()
+    def get_user_alerts(self, user_id: int, limit: int = 50, start_date: datetime.datetime = None, end_date: datetime.datetime = None) -> list[FiredAlert]:
+        query = self.db.query(FiredAlert).filter(FiredAlert.user_id == user_id)
+        if start_date:
+            query = query.filter(FiredAlert.fired_at >= start_date)
+        if end_date:
+            query = query.filter(FiredAlert.fired_at <= end_date)
+        return query.order_by(FiredAlert.fired_at.desc()).limit(limit).all()
+
+    # ── Telemetry history ──────────────────────────────
+    def get_telemetry_history(
+        self, 
+        user_id: int, 
+        sensor_codes: list[str] = None, 
+        start_date: datetime.datetime = None, 
+        end_date: datetime.datetime = None, 
+        limit: int = 5000
+    ) -> list[IotTelemetryHistory]:
+        query = self.db.query(IotTelemetryHistory).filter(IotTelemetryHistory.user_id == user_id)
+        if sensor_codes:
+            query = query.filter(IotTelemetryHistory.sensor_code.in_(sensor_codes))
+        if start_date:
+            query = query.filter(IotTelemetryHistory.created_at >= start_date)
+        if end_date:
+            query = query.filter(IotTelemetryHistory.created_at <= end_date)
+        return query.order_by(IotTelemetryHistory.created_at.desc()).limit(limit).all()
 
     # ── Ingest + evaluation engine ─────────────────────
     def ingest_metrics(
@@ -176,10 +196,23 @@ class IotService:
             # Auto-vincular si aún no tenía dueño y llega un código de vinculación válido
             sensor.user_id = db_user.id
 
-        sensor.metrics = [m.model_dump() for m in metrics]
+        metrics_dump = [m.model_dump() for m in metrics]
+        sensor.metrics = metrics_dump
         sensor.status = "online"
         sensor.last_seen = now_local()
         self.db.add(sensor)
+
+        # Registrar historial de telemetría si el sensor está vinculado
+        if sensor.user_id:
+            history_entry = IotTelemetryHistory(
+                sensor_id=sensor.id if sensor.id else 0,
+                sensor_code=sensor.sensor_code,
+                user_id=sensor.user_id,
+                metrics=metrics_dump,
+                created_at=sensor.last_seen
+            )
+            self.db.add(history_entry)
+
         self.db.commit()
         self.db.refresh(sensor)
 

@@ -53,6 +53,15 @@ export interface FiredAlert {
   firedAt: string;
 }
 
+export interface TelemetryRecord {
+  id: number;
+  sensorId: number;
+  sensorCode: string;
+  sensorName?: string;
+  metrics: SensorMetric[];
+  createdAt: string;
+}
+
 export const conditionLabel: Record<AlertCondition, string> = {
   gt: 'Mayor que (>)',
   lt: 'Menor que (<)',
@@ -82,16 +91,27 @@ export function mapApiSensor(s: any): SensorDevice {
     status: s.status,
     lastSeen: s.last_seen ? formatTime(s.last_seen) : 'Sin datos',
     lastSeenIso: s.last_seen || null,
-    metrics: (s.metrics || []).map((m: any) => {
-      let val = m.value;
-      let unit = m.unit;
-      const name = m.name || '';
-      if (s.temperature_unit === 'F' && (name.toLowerCase().includes('temp') || (unit || '').includes('C'))) {
-        val = Number((m.value * 1.8 + 32).toFixed(1));
-        unit = '°F';
-      }
-      return { name: m.name, value: val, unit, status: m.status, trend: m.trend };
-    }),
+    metrics: (() => {
+      const rawMetrics = s.metrics || [];
+      // Deduplicar métricas redundantes si coexisten sensor_temperatura y temp1
+      const hasSensorTemp = rawMetrics.some((m: any) => (m.name || '').toLowerCase() === 'sensor_temperatura');
+      const filtered = rawMetrics.filter((m: any) => {
+        const name = (m.name || '').toLowerCase();
+        if (hasSensorTemp && name === 'temp1') return false;
+        return true;
+      });
+
+      return filtered.map((m: any) => {
+        let val = m.value;
+        let unit = m.unit;
+        const name = m.name || '';
+        if (s.temperature_unit === 'F' && (name.toLowerCase().includes('temp') || (unit || '').includes('C'))) {
+          val = Number((m.value * 1.8 + 32).toFixed(1));
+          unit = '°F';
+        }
+        return { name: m.name, value: val, unit, status: m.status, trend: m.trend };
+      });
+    })(),
     send_interval_seconds: s.send_interval_seconds || 300,
     baud_rate: s.baud_rate || 9600,
     temperature_unit: s.temperature_unit || 'C',
@@ -129,6 +149,18 @@ export function mapApiFiredAlert(a: any, sensorsById: Record<number, SensorDevic
     condition: a.condition,
     severity: a.severity,
     firedAt: a.fired_at,
+  };
+}
+
+export function mapApiTelemetryHistory(t: any, sensorsById: Record<number, SensorDevice>): TelemetryRecord {
+  const sensor = sensorsById[t.sensor_id];
+  return {
+    id: t.id,
+    sensorId: t.sensor_id,
+    sensorCode: t.sensor_code,
+    sensorName: sensor?.name || t.sensor_code,
+    metrics: t.metrics || [],
+    createdAt: t.created_at,
   };
 }
 

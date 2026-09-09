@@ -1,12 +1,15 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Cpu, Wifi, WifiOff, Zap, Thermometer, Gauge, Activity,
-  Bell, BellOff, BellRing, AlertTriangle, CheckCircle, Clock, RefreshCw,
+  Bell, BellOff, BellRing, AlertTriangle, CheckCircle, Clock, RefreshCw, FileSpreadsheet,
 } from 'lucide-react';
 import KpiCard from '../../components/KpiCard';
 import EmptyState from '../../components/EmptyState';
 import { useSensorsData } from './useSensorsData';
 import AlertToastStack from './AlertToastStack';
+import ExportReportModal from './ExportReportModal';
+import TelemetryTrendChart from './TelemetryTrendChart';
 import { formatTime } from './sensorsApi';
 
 const typeLabel: Record<string, string> = {
@@ -34,7 +37,8 @@ const STALE_MINUTES = 30;
 
 export default function SensorsDashboard() {
   const navigate = useNavigate();
-  const { sensors, alertRules, firedAlerts, toastAlerts, dismissToast, isLoading } = useSensorsData();
+  const { sensors, alertRules, firedAlerts, telemetryHistory, toastAlerts, dismissToast, isLoading } = useSensorsData();
+  const [isExportOpen, setIsExportOpen] = useState(false);
 
   const total = sensors.length;
   const online = sensors.filter(s => s.status === 'online').length;
@@ -75,11 +79,19 @@ export default function SensorsDashboard() {
       <AlertToastStack alerts={toastAlerts} onDismiss={dismissToast} />
 
       <div className="space-y-8">
-        <div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent">
-            Panorama General IoT
-          </h1>
-          <p className="text-sm text-gray-400 mt-1">Estado actual de tu flota de sensores y medidores.</p>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-extrabold text-white tracking-tight bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent">
+              Panorama General IoT
+            </h1>
+            <p className="text-sm text-gray-400 mt-1">Estado actual de tu flota de sensores y medidores.</p>
+          </div>
+          <button
+            onClick={() => setIsExportOpen(true)}
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all shadow-lg shrink-0"
+          >
+            <FileSpreadsheet className="w-4 h-4" /> Exportar Excel
+          </button>
         </div>
 
         {total === 0 ? (
@@ -111,6 +123,12 @@ export default function SensorsDashboard() {
                 </div>
               )}
             </section>
+
+            {/* ── Gráfica de Tendencia y Fluctuación ── */}
+            <TelemetryTrendChart
+              sensors={sensors}
+              telemetryHistory={telemetryHistory}
+            />
 
             {/* ── Estado de alertas ── */}
             <section className="space-y-3">
@@ -200,6 +218,15 @@ export default function SensorsDashboard() {
           </>
         )}
       </div>
+
+      <ExportReportModal
+        open={isExportOpen}
+        onClose={() => setIsExportOpen(false)}
+        sensors={sensors}
+        firedAlerts={firedAlerts}
+        alertRules={alertRules}
+        telemetryHistory={telemetryHistory}
+      />
     </>
   );
 }

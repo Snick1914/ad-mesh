@@ -3,14 +3,15 @@ import shutil
 from fastapi import APIRouter, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, UploadFile, File, Form
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
+from datetime import datetime
 
 from app.api import deps
 from app.models.user import User
 from app.modules.iot.schemas import (
     IotSensorOut, IotSensorCreate, SensorIngest,
     AlertRuleOut, AlertRuleCreate, FiredAlertOut,
-    IotSensorConfigUpdate
+    IotSensorConfigUpdate, IotTelemetryHistoryOut
 )
 from app.modules.iot.services.iot_service import IotService
 from app.modules.iot.models import IotSensor
@@ -250,10 +251,29 @@ def delete_alert_rule(
 @router.get("/alerts", response_model=List[FiredAlertOut])
 def list_fired_alerts(
     limit: int = 50,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user)
 ):
-    return IotService(db).get_user_alerts(current_user.id, limit)
+    return IotService(db).get_user_alerts(current_user.id, limit=limit, start_date=start_date, end_date=end_date)
+
+
+# ── Telemetry recordings history ────────────────────────
+@router.get("/telemetry/history", response_model=List[IotTelemetryHistoryOut])
+def list_telemetry_history(
+    limit: int = 5000,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    """
+    Obtiene el historial de lecturas registradas de todos los sensores del usuario con filtro de fechas opcional.
+    """
+    return IotService(db).get_telemetry_history(current_user.id, limit=limit, start_date=start_date, end_date=end_date)
+
+
 
 
 @router.post("/sensors/{sensor_id}/ota", response_model=IotSensorOut)

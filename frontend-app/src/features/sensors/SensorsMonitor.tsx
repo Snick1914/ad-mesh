@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Cpu, Activity, Zap, Thermometer, Gauge, AlertTriangle,
-  RefreshCw, Plus, Search, ShieldAlert, Settings2, FileSpreadsheet,
+  RefreshCw, Plus, Search, ShieldAlert, Settings2, FileSpreadsheet, History,
 } from 'lucide-react';
 import Modal from '../../components/Modal';
 import EmptyState from '../../components/EmptyState';
@@ -95,6 +95,13 @@ export default function SensorsMonitor() {
             </div>
             <div className="flex items-center gap-2">
               <button
+                onClick={() => navigate('/sensors/history')}
+                className="p-2.5 bg-[#00F0FF]/10 hover:bg-[#00F0FF]/20 text-[#00F0FF] rounded-xl border border-[#00F0FF]/20 transition-all"
+                title="Ver Historial de Métricas"
+              >
+                <History className="w-5 h-5" />
+              </button>
+              <button
                 onClick={() => setIsExportOpen(true)}
                 className="p-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/20 transition-all"
                 title="Exportar Reporte Excel"
@@ -102,7 +109,7 @@ export default function SensorsMonitor() {
                 <FileSpreadsheet className="w-5 h-5" />
               </button>
               <button onClick={() => setIsAddSensorOpen(true)}
-                className="p-2.5 bg-[#00F0FF]/10 hover:bg-[#00F0FF]/20 text-[#00F0FF] rounded-xl border border-[#00F0FF]/20 transition-all"
+                className="p-2.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 rounded-xl border border-yellow-500/20 transition-all"
                 title="Agregar Sensor">
                 <Plus className="w-5 h-5" />
               </button>

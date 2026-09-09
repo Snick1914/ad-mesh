@@ -8,6 +8,7 @@ import SensorsDashboard from './features/sensors/SensorsDashboard';
 import SensorsMonitor from './features/sensors/SensorsMonitor';
 import SensorConfig from './features/sensors/SensorConfig';
 import SensorAlerts from './features/sensors/SensorAlerts';
+import SensorHistory from './features/sensors/SensorHistory';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import AdminLayout from './layouts/AdminLayout';
@@ -83,6 +84,7 @@ function App() {
               <Route path="playlists" element={<PlaylistBuilder />} />
               <Route path="sensors/dashboard" element={<SensorsDashboard />} />
               <Route path="sensors" element={<SensorsMonitor />} />
+              <Route path="sensors/history" element={<SensorHistory />} />
               <Route path="sensors/alerts" element={<SensorAlerts />} />
               <Route path="sensors/:id/config" element={<SensorConfig />} />
             </Route>

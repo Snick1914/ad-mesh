@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Cpu, Wifi, WifiOff, Zap, Thermometer, Gauge, Activity,
-  Bell, BellOff, BellRing, AlertTriangle, CheckCircle, Clock, RefreshCw, FileSpreadsheet,
+  Bell, BellOff, BellRing, AlertTriangle, CheckCircle, Clock, RefreshCw, FileSpreadsheet, History,
 } from 'lucide-react';
 import KpiCard from '../../components/KpiCard';
 import EmptyState from '../../components/EmptyState';
@@ -86,12 +86,20 @@ export default function SensorsDashboard() {
             </h1>
             <p className="text-sm text-gray-400 mt-1">Estado actual de tu flota de sensores y medidores.</p>
           </div>
-          <button
-            onClick={() => setIsExportOpen(true)}
-            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all shadow-lg shrink-0"
-          >
-            <FileSpreadsheet className="w-4 h-4" /> Exportar Excel
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/sensors/history')}
+              className="flex items-center gap-2 bg-[#161C2D] hover:bg-white/10 text-[#00F0FF] font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-xl border border-[#00F0FF]/30 transition-all shadow-lg shrink-0"
+            >
+              <History className="w-4 h-4" /> Ver Historial
+            </button>
+            <button
+              onClick={() => setIsExportOpen(true)}
+              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-xl transition-all shadow-lg shrink-0"
+            >
+              <FileSpreadsheet className="w-4 h-4" /> Exportar Excel
+            </button>
+          </div>
         </div>
 
         {total === 0 ? (

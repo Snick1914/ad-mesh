@@ -26,6 +26,7 @@ class IotSensorCreate(BaseModel):
     metrics: Optional[List[SensorMetric]] = None
     send_interval_seconds: Optional[int] = 300
     baud_rate: Optional[int] = 9600
+    alert_email: Optional[str] = None
 
 
 class IotSensorOut(BaseModel):
@@ -42,6 +43,7 @@ class IotSensorOut(BaseModel):
     ota_version: Optional[str] = None
     ota_file_path: Optional[str] = None
     temperature_unit: Optional[str] = "C"
+    alert_email: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -52,6 +54,7 @@ class IotSensorConfigUpdate(BaseModel):
     baud_rate: Optional[int] = None
     type: Optional[str] = None
     temperature_unit: Optional[str] = None
+    alert_email: Optional[str] = None
 
 
 class SensorIngest(BaseModel):

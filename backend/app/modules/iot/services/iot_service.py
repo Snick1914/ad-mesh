@@ -47,7 +47,8 @@ class IotService:
             last_seen=now_local(),
             metrics=[m.model_dump() for m in data.metrics] if data.metrics else [],
             send_interval_seconds=data.send_interval_seconds if data.send_interval_seconds is not None else 300,
-            baud_rate=data.baud_rate if data.baud_rate is not None else 9600
+            baud_rate=data.baud_rate if data.baud_rate is not None else 9600,
+            alert_email=data.alert_email
         )
         self.db.add(sensor)
         self.db.commit()
@@ -61,7 +62,8 @@ class IotService:
         send_interval_seconds: int, 
         baud_rate: int = None, 
         type: str = None, 
-        temperature_unit: str = None
+        temperature_unit: str = None,
+        alert_email: str = None
     ) -> tuple[bool, str, IotSensor]:
         sensor = self.get_by_id(sensor_id)
         if not sensor or sensor.user_id != user_id:
@@ -73,6 +75,8 @@ class IotService:
             sensor.type = type
         if temperature_unit is not None:
             sensor.temperature_unit = temperature_unit
+        if alert_email is not None:
+            sensor.alert_email = alert_email.strip() if alert_email.strip() else None
         self.db.add(sensor)
         self.db.commit()
         self.db.refresh(sensor)

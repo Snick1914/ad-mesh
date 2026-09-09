@@ -15,6 +15,7 @@ export default function SensorConfig() {
   const [editingInterval, setEditingInterval] = useState<number>(300);
   const [editingBaud, setEditingBaud] = useState<number>(9600);
   const [editingTempUnit, setEditingTempUnit] = useState<string>('C');
+  const [editingAlertEmail, setEditingAlertEmail] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
 
   const fetchSensor = async () => {
@@ -30,6 +31,7 @@ export default function SensorConfig() {
           setEditingInterval(Math.round((mapped.send_interval_seconds || 300) / 60));
           setEditingBaud(mapped.baud_rate || 9600);
           setEditingTempUnit(mapped.temperature_unit || 'C');
+          setEditingAlertEmail(mapped.alert_email || '');
         }
       }
     } catch (err) {
@@ -56,6 +58,7 @@ export default function SensorConfig() {
           send_interval_seconds: Number(editingInterval) * 60,
           baud_rate: Number(editingBaud),
           temperature_unit: editingTempUnit,
+          alert_email: editingAlertEmail,
         }),
       });
       if (res.ok) {
@@ -149,6 +152,17 @@ export default function SensorConfig() {
               <option value="C">Celsius (°C)</option>
               <option value="F">Fahrenheit (°F)</option>
             </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Correo para Notificaciones de Alertas</label>
+            <input
+              type="email"
+              value={editingAlertEmail}
+              onChange={e => setEditingAlertEmail(e.target.value)}
+              placeholder="ej. responsable@empresa.com (opcional)"
+              className="w-full bg-[#0B0F19] border border-white/10 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#00F0FF] transition-all"
+            />
+            <p className="text-[11px] text-gray-500 mt-1">Si se deja vacío, las alertas se enviarán al correo principal de la cuenta.</p>
           </div>
           <button
             type="submit"

@@ -20,6 +20,7 @@ export interface SensorDevice {
   send_interval_seconds?: number;
   baud_rate?: number;
   temperature_unit?: string;
+  alert_email?: string;
   _dbId: number;
 }
 
@@ -94,6 +95,7 @@ export function mapApiSensor(s: any): SensorDevice {
     send_interval_seconds: s.send_interval_seconds || 300,
     baud_rate: s.baud_rate || 9600,
     temperature_unit: s.temperature_unit || 'C',
+    alert_email: s.alert_email || '',
     _dbId: s.id,
   };
 }

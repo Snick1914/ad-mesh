@@ -15,6 +15,7 @@ interface IotSensor {
   ota_version?: string;
   ota_file_path?: string;
   temperature_unit?: string;
+  alert_email?: string;
   user_id?: number;
 }
 
@@ -30,6 +31,7 @@ export default function AdminSensorDetail() {
   const [editingBaud, setEditingBaud] = useState<number>(9600);
   const [editingType, setEditingType] = useState<string>('temperature');
   const [editingTempUnit, setEditingTempUnit] = useState<string>('C');
+  const [editingAlertEmail, setEditingAlertEmail] = useState<string>('');
   const [isUpdatingConfig, setIsUpdatingConfig] = useState(false);
 
   const [otaVersion, setOtaVersion] = useState('');
@@ -52,6 +54,7 @@ export default function AdminSensorDetail() {
           setEditingBaud(found.baud_rate || 9600);
           setEditingType(found.type || 'temperature');
           setEditingTempUnit(found.temperature_unit || 'C');
+          setEditingAlertEmail(found.alert_email || '');
         }
       }
     } catch (err) {
@@ -82,7 +85,8 @@ export default function AdminSensorDetail() {
           send_interval_seconds: Number(editingInterval) * 60,
           baud_rate: Number(editingBaud),
           type: editingType,
-          temperature_unit: editingTempUnit
+          temperature_unit: editingTempUnit,
+          alert_email: editingAlertEmail
         })
       });
       if (res.ok) {
@@ -231,6 +235,17 @@ export default function AdminSensorDetail() {
               <option value={57600}>57600 bps</option>
               <option value={115200}>115200 bps</option>
             </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Correo para Notificaciones de Alertas</label>
+            <input
+              type="email"
+              value={editingAlertEmail}
+              onChange={e => setEditingAlertEmail(e.target.value)}
+              placeholder="ej. responsable@empresa.com (opcional)"
+              className="w-full bg-[#161C2D] border border-white/10 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#00F0FF] transition-all"
+            />
+            <p className="text-[11px] text-gray-500 mt-1">Si se deja vacío, las alertas se enviarán al correo del propietario del equipo.</p>
           </div>
           <button
             type="submit"

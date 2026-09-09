@@ -20,6 +20,7 @@ class IotSensor(Base):
     ota_version = Column(String, nullable=True)
     ota_file_path = Column(String, nullable=True)
     temperature_unit = Column(String, default="C")
+    alert_email = Column(String, nullable=True)
     created_at = Column(DateTime, default=now_local)
 
     user = relationship("User", backref="iot_sensors")

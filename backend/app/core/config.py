@@ -41,6 +41,16 @@ class Settings(BaseSettings):
             return v
         return f"postgresql://{values.get('POSTGRES_USER')}:{values.get('POSTGRES_PASSWORD')}@{values.get('POSTGRES_SERVER')}/{values.get('POSTGRES_DB')}"
 
+    # SMTP / Email
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_USE_TLS: bool = True
+    SMTP_USE_SSL: bool = False
+    EMAIL_FROM: str = ""
+    EMAIL_FROM_NAME: str = "ad-mesh Alertas"
+
     class Config:
         case_sensitive = True
         env_file = ".env"

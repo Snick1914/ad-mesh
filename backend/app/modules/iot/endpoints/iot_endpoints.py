@@ -139,7 +139,8 @@ def update_sensor_configuration(
         send_interval_seconds=payload.send_interval_seconds,
         baud_rate=payload.baud_rate,
         type=payload.type,
-        temperature_unit=payload.temperature_unit
+        temperature_unit=payload.temperature_unit,
+        alert_email=payload.alert_email
     )
     if not success:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=message)
@@ -179,6 +180,21 @@ async def ingest_sensor_metrics(
                 "event": "alert_fired",
                 "alert": FiredAlertOut.model_validate(alert).model_dump(mode="json")
             })
+            target_email = sensor.alert_email or (sensor.user.email if sensor.user else None)
+            if target_email:
+                from app.core.email import send_alert_notification_email
+                fired_at_str = alert.fired_at.strftime("%d/%m/%Y %H:%M:%S") if alert.fired_at else ""
+                asyncio.create_task(send_alert_notification_email(
+                    to_email=target_email,
+                    sensor_name=sensor.name or sensor.sensor_code,
+                    metric_name=alert.metric_name,
+                    current_value=alert.current_value,
+                    unit=alert.unit or "",
+                    condition=alert.condition,
+                    threshold=alert.threshold,
+                    severity=alert.severity,
+                    fired_at_str=fired_at_str
+                ))
 
     return sensor
 

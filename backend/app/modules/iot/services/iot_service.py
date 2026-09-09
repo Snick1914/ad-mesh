@@ -6,6 +6,7 @@ from app.modules.iot.schemas import IotSensorCreate, AlertRuleCreate, SensorMetr
 
 ALERT_COOLDOWN_SECONDS = 15
 _last_fired: dict[int, datetime.datetime] = {}  # rule_id -> last fired timestamp
+_condition_first_detected: dict[int, datetime.datetime] = {}  # rule_id -> primer timestamp donde se detectó la condición anómala
 
 
 def _eval_condition(value: float, condition: str, threshold: float) -> bool:
@@ -101,9 +102,12 @@ class IotService:
         rule = AlertRule(
             user_id=user_id,
             sensor_id=data.sensor_id,
+            name=data.name.strip() if data.name and data.name.strip() else None,
+            custom_message=data.custom_message.strip() if data.custom_message and data.custom_message.strip() else None,
             metric_name=data.metric_name,
             condition=data.condition,
             threshold=data.threshold,
+            duration_minutes=data.duration_minutes or 0,
             severity=data.severity,
             enabled=True
         )
@@ -228,9 +232,28 @@ class IotService:
             for rule in rules:
                 metric = metric_map.get(rule.metric_name)
                 if not metric:
+                    _condition_first_detected.pop(rule.id, None)
                     continue
-                if not _eval_condition(metric.value, rule.condition, rule.threshold):
+
+                condition_met = _eval_condition(metric.value, rule.condition, rule.threshold)
+
+                if not condition_met:
+                    # Si volvió a la normalidad, reiniciamos el temporizador de la condición
+                    _condition_first_detected.pop(rule.id, None)
                     continue
+
+                # La condición se cumple: registrar inicio si es la primera vez
+                if rule.id not in _condition_first_detected:
+                    _condition_first_detected[rule.id] = now
+
+                first_detected = _condition_first_detected[rule.id]
+                elapsed_minutes = (now - first_detected).total_seconds() / 60.0
+                required_duration = rule.duration_minutes or 0
+
+                # Si aún no ha persistido el tiempo requerido, esperar a las siguientes lecturas
+                if elapsed_minutes < required_duration:
+                    continue
+
                 last = _last_fired.get(rule.id)
                 if last and (now - last).total_seconds() < ALERT_COOLDOWN_SECONDS:
                     continue
@@ -241,6 +264,7 @@ class IotService:
                     sensor_id=sensor.id,
                     user_id=sensor.user_id,
                     metric_name=rule.metric_name,
+                    custom_message=rule.custom_message,
                     current_value=metric.value,
                     unit=metric.unit,
                     threshold=rule.threshold,

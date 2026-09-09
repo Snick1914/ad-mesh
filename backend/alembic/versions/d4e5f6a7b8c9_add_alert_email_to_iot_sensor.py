@@ -19,21 +19,37 @@ def upgrade() -> None:
     # safe addition with check/fallback
     conn = op.get_bind()
     inspector = sa.inspect(conn)
-    columns = [c['name'] for c in inspector.get_columns('iot_sensor')]
+    sensor_columns = [c['name'] for c in inspector.get_columns('iot_sensor')]
 
-    if 'send_interval_seconds' not in columns:
+    if 'send_interval_seconds' not in sensor_columns:
         op.add_column('iot_sensor', sa.Column('send_interval_seconds', sa.Integer(), nullable=False, server_default='300'))
-    if 'baud_rate' not in columns:
+    if 'baud_rate' not in sensor_columns:
         op.add_column('iot_sensor', sa.Column('baud_rate', sa.Integer(), nullable=True, server_default='9600'))
-    if 'ota_version' not in columns:
+    if 'ota_version' not in sensor_columns:
         op.add_column('iot_sensor', sa.Column('ota_version', sa.String(255), nullable=True))
-    if 'ota_file_path' not in columns:
+    if 'ota_file_path' not in sensor_columns:
         op.add_column('iot_sensor', sa.Column('ota_file_path', sa.String(512), nullable=True))
-    if 'temperature_unit' not in columns:
+    if 'temperature_unit' not in sensor_columns:
         op.add_column('iot_sensor', sa.Column('temperature_unit', sa.String(10), nullable=True, server_default='C'))
-    if 'alert_email' not in columns:
+    if 'alert_email' not in sensor_columns:
         op.add_column('iot_sensor', sa.Column('alert_email', sa.String(255), nullable=True))
+
+    rule_columns = [c['name'] for c in inspector.get_columns('alert_rule')]
+    if 'name' not in rule_columns:
+        op.add_column('alert_rule', sa.Column('name', sa.String(255), nullable=True))
+    if 'custom_message' not in rule_columns:
+        op.add_column('alert_rule', sa.Column('custom_message', sa.String(1000), nullable=True))
+    if 'duration_minutes' not in rule_columns:
+        op.add_column('alert_rule', sa.Column('duration_minutes', sa.Integer(), nullable=False, server_default='0'))
+
+    fired_columns = [c['name'] for c in inspector.get_columns('fired_alert')]
+    if 'custom_message' not in fired_columns:
+        op.add_column('fired_alert', sa.Column('custom_message', sa.String(1000), nullable=True))
 
 
 def downgrade() -> None:
+    op.drop_column('fired_alert', 'custom_message')
+    op.drop_column('alert_rule', 'custom_message')
+    op.drop_column('alert_rule', 'duration_minutes')
+    op.drop_column('alert_rule', 'name')
     op.drop_column('iot_sensor', 'alert_email')

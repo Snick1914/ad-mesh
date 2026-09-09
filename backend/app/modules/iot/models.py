@@ -32,9 +32,12 @@ class AlertRule(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True)
     sensor_id = Column(Integer, ForeignKey("iot_sensor.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String, nullable=True)  # Nombre descriptivo de la alerta (ej. "Alta temp caldera")
+    custom_message = Column(String, nullable=True)  # Mensaje o instrucción personalizada (ej. "Verificar válvula de alivio")
     metric_name = Column(String, nullable=False)
     condition = Column(String, nullable=False)  # gt | lt | gte | lte
     threshold = Column(Float, nullable=False)
+    duration_minutes = Column(Integer, default=0, nullable=False)  # tiempo que debe persistir la condición (0 = inmediata)
     severity = Column(String, default="warning")  # warning | critical
     enabled = Column(Boolean, default=True)
     created_at = Column(DateTime, default=now_local)
@@ -51,6 +54,7 @@ class FiredAlert(Base):
     sensor_id = Column(Integer, ForeignKey("iot_sensor.id", ondelete="CASCADE"), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True)
     metric_name = Column(String, nullable=False)
+    custom_message = Column(String, nullable=True)
     current_value = Column(Float, nullable=False)
     unit = Column(String, nullable=True)
     threshold = Column(Float, nullable=False)

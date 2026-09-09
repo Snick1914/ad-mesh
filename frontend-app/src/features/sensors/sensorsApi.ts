@@ -31,9 +31,12 @@ export interface AlertRule {
   id: string;
   sensorId: string;
   sensorName: string;
+  name?: string;
+  customMessage?: string;
   metricName: string;
   condition: AlertCondition;
   threshold: number;
+  durationMinutes: number;
   severity: AlertSeverity;
   enabled: boolean;
   createdAt: string;
@@ -44,6 +47,8 @@ export interface FiredAlert {
   ruleId: string;
   sensorId: string;
   sensorName: string;
+  ruleName?: string;
+  customMessage?: string;
   metricName: string;
   currentValue: number;
   unit: string;
@@ -126,9 +131,12 @@ export function mapApiRule(r: any, sensorsById: Record<number, SensorDevice>): A
     id: String(r.id),
     sensorId: sensor?.id ?? String(r.sensor_id),
     sensorName: sensor?.name ?? '—',
+    name: r.name || undefined,
+    customMessage: r.custom_message || undefined,
     metricName: r.metric_name,
     condition: r.condition,
     threshold: r.threshold,
+    durationMinutes: r.duration_minutes || 0,
     severity: r.severity,
     enabled: r.enabled,
     createdAt: r.created_at,
@@ -142,6 +150,7 @@ export function mapApiFiredAlert(a: any, sensorsById: Record<number, SensorDevic
     ruleId: String(a.rule_id),
     sensorId: sensor?.id ?? String(a.sensor_id),
     sensorName: sensor?.name ?? '—',
+    customMessage: a.custom_message || undefined,
     metricName: a.metric_name,
     currentValue: a.current_value,
     unit: a.unit,

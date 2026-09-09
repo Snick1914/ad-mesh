@@ -7,7 +7,7 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-def _send_alert_email_sync(to_email: str, sensor_name: str, metric_name: str, current_value: float, unit: str, condition: str, threshold: float, severity: str, fired_at_str: str):
+def _send_alert_email_sync(to_email: str, sensor_name: str, metric_name: str, current_value: float, unit: str, condition: str, threshold: float, severity: str, fired_at_str: str, rule_name: str = None, custom_message: str = None):
     if not settings.SMTP_HOST or not settings.SMTP_USER or not settings.SMTP_PASSWORD:
         logger.warning("[EMAIL] Configuración SMTP incompleta. Correo no enviado.")
         return False
@@ -23,7 +23,17 @@ def _send_alert_email_sync(to_email: str, sensor_name: str, metric_name: str, cu
     severity_label = "CRÍTICA" if severity == "critical" else "ADVERTENCIA"
     unit_str = f" {unit}" if unit else ""
 
-    subject = f"[{severity_label}] Alerta activada en {sensor_name}: {metric_name}"
+    display_title = f"{rule_name} ({sensor_name})" if rule_name else f"{sensor_name}: {metric_name}"
+    subject = f"[{severity_label}] Alerta activada: {display_title}"
+
+    custom_msg_block = ""
+    if custom_message:
+        custom_msg_block = f"""
+        <div style="background-color: rgba(0, 240, 255, 0.08); border-left: 4px solid #00F0FF; padding: 14px 16px; border-radius: 4px; margin: 18px 0; color: #e2e8f0; font-size: 14px; line-height: 1.5;">
+          <strong style="color: #00F0FF; display: block; margin-bottom: 4px; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Mensaje / Instrucción Personalizada:</strong>
+          {custom_message}
+        </div>
+        """
 
     html_content = f"""
     <!DOCTYPE html>
@@ -50,7 +60,7 @@ def _send_alert_email_sync(to_email: str, sensor_name: str, metric_name: str, cu
       <div class="card">
         <div class="header">
           <span class="badge">{severity_label}</span>
-          <div class="title">Alerta de Umbral Superado</div>
+          <div class="title">{rule_name or "Alerta de Umbral Superado"}</div>
         </div>
         <p style="color: #cbd5e1; font-size: 15px; margin: 0 0 16px 0;">
           Se ha disparado una regla de alerta en el dispositivo <strong>{sensor_name}</strong>.
@@ -59,6 +69,7 @@ def _send_alert_email_sync(to_email: str, sensor_name: str, metric_name: str, cu
           <div class="metric-value">{current_value}{unit_str}</div>
           <div class="metric-rule">Condición: {metric_name} {cond_sym} {threshold}{unit_str}</div>
         </div>
+        {custom_msg_block}
         <table class="details">
           <tr>
             <td class="label">Sensor / Dispositivo:</td>
@@ -125,7 +136,9 @@ async def send_alert_notification_email(
     condition: str,
     threshold: float,
     severity: str,
-    fired_at_str: str
+    fired_at_str: str,
+    rule_name: str = None,
+    custom_message: str = None
 ):
     if not to_email:
         return
@@ -139,5 +152,7 @@ async def send_alert_notification_email(
         condition,
         threshold,
         severity,
-        fired_at_str
+        fired_at_str,
+        rule_name,
+        custom_message
     )

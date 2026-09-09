@@ -67,18 +67,24 @@ class SensorIngest(BaseModel):
 
 class AlertRuleCreate(BaseModel):
     sensor_id: int
+    name: Optional[str] = None
+    custom_message: Optional[str] = None
     metric_name: str
     condition: AlertCondition
     threshold: float
+    duration_minutes: Optional[int] = 0
     severity: AlertSeverity = "warning"
 
 
 class AlertRuleOut(BaseModel):
     id: int
     sensor_id: int
+    name: Optional[str] = None
+    custom_message: Optional[str] = None
     metric_name: str
     condition: str
     threshold: float
+    duration_minutes: int = 0
     severity: str
     enabled: bool
     created_at: datetime
@@ -92,6 +98,7 @@ class FiredAlertOut(BaseModel):
     rule_id: int
     sensor_id: int
     metric_name: str
+    custom_message: Optional[str] = None
     current_value: float
     unit: Optional[str]
     threshold: float

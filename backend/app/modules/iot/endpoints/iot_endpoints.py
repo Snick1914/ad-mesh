@@ -1,5 +1,6 @@
 import os
 import shutil
+import asyncio
 from fastapi import APIRouter, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, UploadFile, File, Form
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
@@ -14,7 +15,7 @@ from app.modules.iot.schemas import (
     IotSensorConfigUpdate, IotTelemetryHistoryOut
 )
 from app.modules.iot.services.iot_service import IotService
-from app.modules.iot.models import IotSensor
+from app.modules.iot.models import IotSensor, AlertRule
 
 router = APIRouter()
 
@@ -185,6 +186,8 @@ async def ingest_sensor_metrics(
             if target_email:
                 from app.core.email import send_alert_notification_email
                 fired_at_str = alert.fired_at.strftime("%d/%m/%Y %H:%M:%S") if alert.fired_at else ""
+                rule_name = alert.rule.name if alert.rule and alert.rule.name else None
+                custom_message = alert.custom_message or (alert.rule.custom_message if alert.rule else None)
                 asyncio.create_task(send_alert_notification_email(
                     to_email=target_email,
                     sensor_name=sensor.name or sensor.sensor_code,
@@ -194,7 +197,9 @@ async def ingest_sensor_metrics(
                     condition=alert.condition,
                     threshold=alert.threshold,
                     severity=alert.severity,
-                    fired_at_str=fired_at_str
+                    fired_at_str=fired_at_str,
+                    rule_name=rule_name,
+                    custom_message=custom_message
                 ))
 
     return sensor

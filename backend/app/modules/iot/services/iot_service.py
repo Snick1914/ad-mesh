@@ -61,6 +61,7 @@ class IotService:
         sensor_id: int, 
         user_id: int, 
         send_interval_seconds: int, 
+        name: str = None,
         baud_rate: int = None, 
         type: str = None, 
         temperature_unit: str = None,
@@ -69,6 +70,8 @@ class IotService:
         sensor = self.get_by_id(sensor_id)
         if not sensor or sensor.user_id != user_id:
             return False, "Sensor no encontrado o sin permisos.", None
+        if name is not None and name.strip():
+            sensor.name = name.strip()
         sensor.send_interval_seconds = send_interval_seconds
         if baud_rate is not None:
             sensor.baud_rate = baud_rate
@@ -200,7 +203,13 @@ class IotService:
             # Auto-vincular si aún no tenía dueño y llega un código de vinculación válido
             sensor.user_id = db_user.id
 
-        metrics_dump = [m.model_dump() for m in metrics]
+        metrics_dump = []
+        for m in metrics:
+            m_dict = m.model_dump()
+            if isinstance(m_dict.get("value"), (int, float)):
+                m_dict["value"] = round(float(m_dict["value"]), 2)
+            metrics_dump.append(m_dict)
+
         sensor.metrics = metrics_dump
         sensor.status = "online"
         sensor.last_seen = now_local()

@@ -12,6 +12,7 @@ export default function SensorConfig() {
   const [sensor, setSensor] = useState<ReturnType<typeof mapApiSensor> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const [editingName, setEditingName] = useState<string>('');
   const [editingInterval, setEditingInterval] = useState<number>(300);
   const [editingBaud, setEditingBaud] = useState<number>(9600);
   const [editingTempUnit, setEditingTempUnit] = useState<string>('C');
@@ -28,6 +29,7 @@ export default function SensorConfig() {
         if (found) {
           const mapped = mapApiSensor(found);
           setSensor(mapped);
+          setEditingName(mapped.name || '');
           setEditingInterval(Math.round((mapped.send_interval_seconds || 300) / 60));
           setEditingBaud(mapped.baud_rate || 9600);
           setEditingTempUnit(mapped.temperature_unit || 'C');
@@ -55,6 +57,7 @@ export default function SensorConfig() {
         method: 'PUT',
         headers: authHeaders(),
         body: JSON.stringify({
+          name: editingName.trim() || undefined,
           send_interval_seconds: Number(editingInterval) * 60,
           baud_rate: Number(editingBaud),
           temperature_unit: editingTempUnit,
@@ -114,6 +117,18 @@ export default function SensorConfig() {
         </h3>
 
         <form onSubmit={handleSave} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Nombre del Sensor</label>
+            <input
+              type="text"
+              value={editingName}
+              onChange={e => setEditingName(e.target.value)}
+              placeholder="Ej. Sensor Temperatura Cuarto Frío 1"
+              className="w-full bg-[#0B0F19] border border-white/10 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#00F0FF] transition-all"
+              required
+            />
+          </div>
+
           <div>
             <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wider">Frecuencia de Envío (minutos)</label>
             <input

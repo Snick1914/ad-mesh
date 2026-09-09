@@ -50,6 +50,7 @@ class IotSensorOut(BaseModel):
 
 
 class IotSensorConfigUpdate(BaseModel):
+    name: Optional[str] = None
     send_interval_seconds: int
     baud_rate: Optional[int] = None
     type: Optional[str] = None

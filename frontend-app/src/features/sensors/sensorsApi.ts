@@ -107,14 +107,14 @@ export function mapApiSensor(s: any): SensorDevice {
       });
 
       return filtered.map((m: any) => {
-        let val = m.value;
+        let val = typeof m.value === 'number' ? Number(m.value.toFixed(2)) : m.value;
         let unit = m.unit;
         const name = m.name || '';
         if (s.temperature_unit === 'F' && (name.toLowerCase().includes('temp') || (unit || '').includes('C'))) {
-          val = Number((m.value * 1.8 + 32).toFixed(1));
+          val = Number((m.value * 1.8 + 32).toFixed(2));
           unit = '°F';
         }
-        return { name: m.name, value: val, unit, status: m.status, trend: m.trend };
+        return { name: m.name, value: typeof val === 'number' ? Number(val.toFixed(2)) : val, unit, status: m.status, trend: m.trend };
       });
     })(),
     send_interval_seconds: s.send_interval_seconds || 300,
@@ -135,7 +135,7 @@ export function mapApiRule(r: any, sensorsById: Record<number, SensorDevice>): A
     customMessage: r.custom_message || undefined,
     metricName: r.metric_name,
     condition: r.condition,
-    threshold: r.threshold,
+    threshold: typeof r.threshold === 'number' ? Number(r.threshold.toFixed(2)) : r.threshold,
     durationMinutes: r.duration_minutes || 0,
     severity: r.severity,
     enabled: r.enabled,
@@ -152,9 +152,9 @@ export function mapApiFiredAlert(a: any, sensorsById: Record<number, SensorDevic
     sensorName: sensor?.name ?? '—',
     customMessage: a.custom_message || undefined,
     metricName: a.metric_name,
-    currentValue: a.current_value,
+    currentValue: typeof a.current_value === 'number' ? Number(a.current_value.toFixed(2)) : a.current_value,
     unit: a.unit,
-    threshold: a.threshold,
+    threshold: typeof a.threshold === 'number' ? Number(a.threshold.toFixed(2)) : a.threshold,
     condition: a.condition,
     severity: a.severity,
     firedAt: a.fired_at,
@@ -163,12 +163,17 @@ export function mapApiFiredAlert(a: any, sensorsById: Record<number, SensorDevic
 
 export function mapApiTelemetryHistory(t: any, sensorsById: Record<number, SensorDevice>): TelemetryRecord {
   const sensor = sensorsById[t.sensor_id];
+  const rawMetrics = t.metrics || [];
+  const roundedMetrics = rawMetrics.map((m: any) => ({
+    ...m,
+    value: typeof m.value === 'number' ? Number(m.value.toFixed(2)) : m.value,
+  }));
   return {
     id: t.id,
     sensorId: t.sensor_id,
     sensorCode: t.sensor_code,
     sensorName: sensor?.name || t.sensor_code,
-    metrics: t.metrics || [],
+    metrics: roundedMetrics,
     createdAt: t.created_at,
   };
 }

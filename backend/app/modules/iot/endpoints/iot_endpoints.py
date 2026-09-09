@@ -139,6 +139,7 @@ def update_sensor_configuration(
         sensor_id=sensor_id,
         user_id=current_user.id,
         send_interval_seconds=payload.send_interval_seconds,
+        name=payload.name,
         baud_rate=payload.baud_rate,
         type=payload.type,
         temperature_unit=payload.temperature_unit,

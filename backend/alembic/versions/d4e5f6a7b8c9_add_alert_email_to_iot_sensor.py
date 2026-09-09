@@ -41,6 +41,8 @@ def upgrade() -> None:
         op.add_column('alert_rule', sa.Column('custom_message', sa.String(1000), nullable=True))
     if 'duration_minutes' not in rule_columns:
         op.add_column('alert_rule', sa.Column('duration_minutes', sa.Integer(), nullable=False, server_default='0'))
+    if 'notify_interval_minutes' not in rule_columns:
+        op.add_column('alert_rule', sa.Column('notify_interval_minutes', sa.Integer(), nullable=False, server_default='0'))
 
     fired_columns = [c['name'] for c in inspector.get_columns('fired_alert')]
     if 'custom_message' not in fired_columns:

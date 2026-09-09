@@ -37,6 +37,7 @@ export interface AlertRule {
   condition: AlertCondition;
   threshold: number;
   durationMinutes: number;
+  notifyIntervalMinutes: number;
   severity: AlertSeverity;
   enabled: boolean;
   createdAt: string;
@@ -137,6 +138,7 @@ export function mapApiRule(r: any, sensorsById: Record<number, SensorDevice>): A
     condition: r.condition,
     threshold: typeof r.threshold === 'number' ? Number(r.threshold.toFixed(2)) : r.threshold,
     durationMinutes: r.duration_minutes || 0,
+    notifyIntervalMinutes: r.notify_interval_minutes || 0,
     severity: r.severity,
     enabled: r.enabled,
     createdAt: r.created_at,

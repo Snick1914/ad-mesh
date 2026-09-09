@@ -111,6 +111,7 @@ class IotService:
             condition=data.condition,
             threshold=data.threshold,
             duration_minutes=data.duration_minutes or 0,
+            notify_interval_minutes=data.notify_interval_minutes or 0,
             severity=data.severity,
             enabled=True
         )
@@ -133,6 +134,8 @@ class IotService:
         rule = self.db.query(AlertRule).filter(AlertRule.id == rule_id).first()
         if not rule or rule.user_id != user_id:
             return False
+        # Limpiar registros de alertas disparadas vinculadas para evitar error de foreign key
+        self.db.query(FiredAlert).filter(FiredAlert.rule_id == rule_id).delete(synchronize_session=False)
         self.db.delete(rule)
         self.db.commit()
         return True
@@ -242,13 +245,15 @@ class IotService:
                 metric = metric_map.get(rule.metric_name)
                 if not metric:
                     _condition_first_detected.pop(rule.id, None)
+                    _last_fired.pop(rule.id, None)
                     continue
 
                 condition_met = _eval_condition(metric.value, rule.condition, rule.threshold)
 
                 if not condition_met:
-                    # Si volvió a la normalidad, reiniciamos el temporizador de la condición
+                    # Si volvió a la normalidad, reiniciamos el temporizador de la condición y último disparo
                     _condition_first_detected.pop(rule.id, None)
+                    _last_fired.pop(rule.id, None)
                     continue
 
                 # La condición se cumple: registrar inicio si es la primera vez
@@ -263,9 +268,17 @@ class IotService:
                 if elapsed_minutes < required_duration:
                     continue
 
+                # Intervalo de renotificación: si notify_interval_minutes == 0, solo se envía 1 vez por evento (hasta que vuelva a la normalidad y se repita)
+                # Si notify_interval_minutes > 0, se reenvía cada N minutos mientras persista la condición anómala
                 last = _last_fired.get(rule.id)
-                if last and (now - last).total_seconds() < ALERT_COOLDOWN_SECONDS:
-                    continue
+                if last:
+                    interval_min = rule.notify_interval_minutes or 0
+                    if interval_min == 0:
+                        # Ya se notificó para este evento sostenido
+                        continue
+                    cooldown_seconds = interval_min * 60
+                    if (now - last).total_seconds() < cooldown_seconds:
+                        continue
                 _last_fired[rule.id] = now
 
                 alert = FiredAlert(

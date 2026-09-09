@@ -26,6 +26,7 @@ export default function SensorAlerts() {
   const [ruleCondition, setRuleCondition] = useState<AlertCondition>('gt');
   const [ruleThreshold, setRuleThreshold] = useState('');
   const [ruleDurationMinutes, setRuleDurationMinutes] = useState('0');
+  const [ruleNotifyIntervalMinutes, setRuleNotifyIntervalMinutes] = useState('0');
   const [ruleSeverity, setRuleSeverity] = useState<AlertSeverity>('warning');
 
   const deleteRule = async (id: string) => {
@@ -54,6 +55,7 @@ export default function SensorAlerts() {
         condition: ruleCondition,
         threshold: Number(ruleThreshold),
         duration_minutes: Number(ruleDurationMinutes) || 0,
+        notify_interval_minutes: Number(ruleNotifyIntervalMinutes) || 0,
         severity: ruleSeverity,
       }),
     });
@@ -61,7 +63,7 @@ export default function SensorAlerts() {
     const created = await res.json();
     setAlertRules(prev => [...prev, mapApiRule(created, sensorsById)]);
     setIsAddRuleOpen(false);
-    setRuleThreshold(''); setRuleMetric(''); setRuleName(''); setRuleCustomMessage(''); setRuleDurationMinutes('0');
+    setRuleThreshold(''); setRuleMetric(''); setRuleName(''); setRuleCustomMessage(''); setRuleDurationMinutes('0'); setRuleNotifyIntervalMinutes('0');
   };
 
   const metricsOfRuleSensor = sensors.find(s => s.id === ruleSensorId)?.metrics ?? [];
@@ -134,11 +136,20 @@ export default function SensorAlerts() {
                     <span className={`font-bold ${rule.severity === 'critical' ? 'text-red-300' : 'text-yellow-300'}`}>{rule.threshold}</span>
                     {rule.durationMinutes > 0 ? (
                       <span className="ml-2 text-cyan-400 font-sans text-[10px]">
-                        ⏱ por más de {rule.durationMinutes} min
+                        ⏱ {rule.durationMinutes} min sostenido
                       </span>
                     ) : (
                       <span className="ml-2 text-gray-500 font-sans text-[10px]">
                         ⚡ Inmediata
+                      </span>
+                    )}
+                    {rule.notifyIntervalMinutes > 0 ? (
+                      <span className="ml-2 text-amber-400 font-sans text-[10px]">
+                        🔁 Reenvío c/{rule.notifyIntervalMinutes} min
+                      </span>
+                    ) : (
+                      <span className="ml-2 text-gray-500 font-sans text-[10px]">
+                        ✉️ 1 solo correo
                       </span>
                     )}
                   </p>
@@ -325,6 +336,59 @@ export default function SensorAlerts() {
                   className="w-28 bg-[#0B0F19] border border-white/10 rounded-xl px-3 py-1.5 text-white font-mono text-xs focus:outline-none focus:ring-2 focus:ring-yellow-500"
                 />
                 <span className="text-xs text-gray-400">minutos seguidos cumpliendo la condición antes de notificar.</span>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+              Frecuencia de Reenvío de Correo (mientras persista la condición)
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: 'Solo 1 vez', value: '0' },
+                { label: 'Cada 5 min', value: '5' },
+                { label: 'Cada 15 min', value: '15' },
+                { label: 'Cada 30 min', value: '30' },
+                { label: 'Cada 1 hora', value: '60' },
+                { label: 'Personalizado', value: 'custom' },
+              ].map(opt => {
+                const isSelected = opt.value === 'custom'
+                  ? !['0', '5', '15', '30', '60'].includes(ruleNotifyIntervalMinutes)
+                  : ruleNotifyIntervalMinutes === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      if (opt.value !== 'custom') {
+                        setRuleNotifyIntervalMinutes(opt.value);
+                      } else if (['0', '5', '15', '30', '60'].includes(ruleNotifyIntervalMinutes)) {
+                        setRuleNotifyIntervalMinutes('10');
+                      }
+                    }}
+                    className={`py-2 px-2 text-xs font-semibold rounded-xl border transition-all truncate ${
+                      isSelected
+                        ? 'bg-yellow-500/15 border-yellow-500 text-yellow-300'
+                        : 'bg-white/5 border-white/10 text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+            {!['0', '5', '15', '30', '60'].includes(ruleNotifyIntervalMinutes) && (
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  value={ruleNotifyIntervalMinutes}
+                  onChange={e => setRuleNotifyIntervalMinutes(e.target.value)}
+                  placeholder="Minutos"
+                  className="w-28 bg-[#0B0F19] border border-white/10 rounded-xl px-3 py-1.5 text-white font-mono text-xs focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                />
+                <span className="text-xs text-gray-400">minutos entre correos si la condición sigue activa.</span>
               </div>
             )}
           </div>

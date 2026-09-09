@@ -23,6 +23,10 @@ def _send_alert_email_sync(to_email: str, sensor_name: str, metric_name: str, cu
     severity_label = "CRÍTICA" if severity == "critical" else "ADVERTENCIA"
     unit_str = f" {unit}" if unit else ""
 
+    # Formatear números a 2 decimales
+    formatted_val = f"{float(current_value):.2f}" if isinstance(current_value, (int, float)) else str(current_value)
+    formatted_thresh = f"{float(threshold):.2f}" if isinstance(threshold, (int, float)) else str(threshold)
+
     display_title = f"{rule_name} ({sensor_name})" if rule_name else f"{sensor_name}: {metric_name}"
     subject = f"[{severity_label}] Alerta activada: {display_title}"
 
@@ -43,9 +47,13 @@ def _send_alert_email_sync(to_email: str, sensor_name: str, metric_name: str, cu
       <style>
         body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0f172a; color: #f8fafc; margin: 0; padding: 24px; }}
         .card {{ background-color: #1e293b; border: 1px solid #334155; border-radius: 12px; max-width: 560px; margin: 0 auto; padding: 28px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3); }}
-        .header {{ border-bottom: 1px solid #334155; padding-bottom: 16px; margin-bottom: 20px; }}
-        .badge {{ display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; text-transform: uppercase; background-color: {severity_color}; color: #ffffff; }}
-        .title {{ font-size: 20px; font-weight: bold; margin-top: 12px; color: #ffffff; }}
+        .brand-bar {{ display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #334155; padding-bottom: 14px; margin-bottom: 18px; }}
+        .brand-name {{ font-size: 16px; font-weight: 800; letter-spacing: 1px; color: #00F0FF; text-transform: uppercase; }}
+        .badge {{ display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; background-color: {severity_color}; color: #ffffff; letter-spacing: 0.5px; }}
+        .header {{ margin-bottom: 18px; }}
+        .header-title-row {{ display: flex; align-items: center; gap: 10px; margin-top: 8px; }}
+        .alert-icon {{ font-size: 24px; vertical-align: middle; }}
+        .title {{ font-size: 20px; font-weight: 700; color: #ffffff; display: inline-block; margin: 0; }}
         .metric-box {{ background-color: #0f172a; border-radius: 8px; padding: 18px; margin: 20px 0; border: 1px solid #334155; text-align: center; }}
         .metric-value {{ font-size: 32px; font-weight: 800; color: {severity_color}; }}
         .metric-rule {{ font-size: 14px; color: #94a3b8; margin-top: 6px; }}
@@ -58,16 +66,28 @@ def _send_alert_email_sync(to_email: str, sensor_name: str, metric_name: str, cu
     </head>
     <body>
       <div class="card">
-        <div class="header">
+        <div class="brand-bar">
+          <span class="brand-name">⚡ AD-MESH IoT</span>
           <span class="badge">{severity_label}</span>
-          <div class="title">{rule_name or "Alerta de Umbral Superado"}</div>
+        </div>
+        <div class="header">
+          <table style="width: 100%; border: none;">
+            <tr>
+              <td style="width: 32px; vertical-align: middle; font-size: 22px;">
+                {"🚨" if severity == "critical" else "⚠️"}
+              </td>
+              <td style="vertical-align: middle;">
+                <div class="title">{rule_name or "Alerta de Umbral Superado"}</div>
+              </td>
+            </tr>
+          </table>
         </div>
         <p style="color: #cbd5e1; font-size: 15px; margin: 0 0 16px 0;">
           Se ha disparado una regla de alerta en el dispositivo <strong>{sensor_name}</strong>.
         </p>
         <div class="metric-box">
-          <div class="metric-value">{current_value}{unit_str}</div>
-          <div class="metric-rule">Condición: {metric_name} {cond_sym} {threshold}{unit_str}</div>
+          <div class="metric-value">{formatted_val}{unit_str}</div>
+          <div class="metric-rule">Condición: {metric_name} {cond_sym} {formatted_thresh}{unit_str}</div>
         </div>
         {custom_msg_block}
         <table class="details">
@@ -81,11 +101,11 @@ def _send_alert_email_sync(to_email: str, sensor_name: str, metric_name: str, cu
           </tr>
           <tr>
             <td class="label">Valor Registrado:</td>
-            <td class="val" style="color: {severity_color};">{current_value}{unit_str}</td>
+            <td class="val" style="color: {severity_color};">{formatted_val}{unit_str}</td>
           </tr>
           <tr>
             <td class="label">Umbral Configurado:</td>
-            <td class="val">{cond_sym} {threshold}{unit_str}</td>
+            <td class="val">{cond_sym} {formatted_thresh}{unit_str}</td>
           </tr>
           <tr>
             <td class="label">Fecha y Hora:</td>

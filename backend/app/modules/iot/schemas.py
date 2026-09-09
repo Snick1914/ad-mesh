@@ -74,6 +74,7 @@ class AlertRuleCreate(BaseModel):
     condition: AlertCondition
     threshold: float
     duration_minutes: Optional[int] = 0
+    notify_interval_minutes: Optional[int] = 0
     severity: AlertSeverity = "warning"
 
 
@@ -86,6 +87,7 @@ class AlertRuleOut(BaseModel):
     condition: str
     threshold: float
     duration_minutes: int = 0
+    notify_interval_minutes: int = 0
     severity: str
     enabled: bool
     created_at: datetime

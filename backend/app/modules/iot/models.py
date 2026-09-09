@@ -38,12 +38,14 @@ class AlertRule(Base):
     condition = Column(String, nullable=False)  # gt | lt | gte | lte
     threshold = Column(Float, nullable=False)
     duration_minutes = Column(Integer, default=0, nullable=False)  # tiempo que debe persistir la condición (0 = inmediata)
+    notify_interval_minutes = Column(Integer, default=0, nullable=False)  # reenvío periódico mientras persista (0 = solo una vez al activarse)
     severity = Column(String, default="warning")  # warning | critical
     enabled = Column(Boolean, default=True)
     created_at = Column(DateTime, default=now_local)
 
     user = relationship("User", backref="alert_rules")
     sensor = relationship("IotSensor", backref="alert_rules")
+    fired_alerts = relationship("FiredAlert", back_populates="rule", cascade="all, delete-orphan", passive_deletes=True)
 
 
 class FiredAlert(Base):
@@ -62,7 +64,7 @@ class FiredAlert(Base):
     severity = Column(String, nullable=False)
     fired_at = Column(DateTime, default=now_local, index=True)
 
-    rule = relationship("AlertRule", backref="fired_alerts")
+    rule = relationship("AlertRule", back_populates="fired_alerts")
     sensor = relationship("IotSensor", backref="fired_alerts")
 
 
